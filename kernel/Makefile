@@ -56,7 +56,7 @@ obj-$(CONFIG_PROVE_LOCKING) += spinlock.o
 obj-$(CONFIG_UID16) += uid16.o
 obj-$(CONFIG_SYSTEM_TRUSTED_KEYRING) += system_keyring.o system_certificates.o
 obj-$(CONFIG_MODULES) += module.o
-obj-$(CONFIG_MODULE_SIG) += module_signing.o
+obj-$(CONFIG_MODULE_SIG) += module_signing.o modsign_pubkey.o modsign_certificate.o
 obj-$(CONFIG_KALLSYMS) += kallsyms.o
 obj-$(CONFIG_BSD_PROCESS_ACCT) += acct.o
 obj-$(CONFIG_KEXEC) += kexec.o
@@ -165,7 +165,11 @@ $(shell rm $(obj)/.x509.list)
 endif
 endif
 
+<<<<<<< HEAD
 kernel/system_certificates.o: $(obj)/x509_certificate_list
+=======
+kernel/modsign_certificate.o: signing_key.x509 extra_certificates
+>>>>>>> 919aa45e43a8... MODSIGN: Avoid using .incbin in C source
 
 quiet_cmd_x509certs  = CERTS   $@
       cmd_x509certs  = cat $(X509_CERTIFICATES) /dev/null >$@ $(foreach X509,$(X509_CERTIFICATES),; echo "  - Including cert $(X509)")
