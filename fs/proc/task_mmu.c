@@ -1251,7 +1251,6 @@ cont:
 			break;
 	}
 	pte_unmap_unlock(pte - 1, ptl);
-
 	reclaimed = reclaim_pages_from_list(&page_list, vma);
 	rp->nr_reclaimed += reclaimed;
 	rp->nr_to_reclaim -= reclaimed;
