@@ -130,6 +130,10 @@ struct drm_kgsl_gem_object {
 
 };
 
+struct drm_kgsl_file_private {
+	pid_t tgid;
+};
+
 static struct ion_client *kgsl_drm_ion_client;
 
 static int kgsl_drm_inited = DRM_KGSL_NOT_INITED;
@@ -140,6 +144,11 @@ static struct list_head kgsl_mem_list;
 struct kgsl_drm_device_priv {
 	struct kgsl_device *device[KGSL_DEVICE_MAX];
 	struct kgsl_device_private *devpriv[KGSL_DEVICE_MAX];
+};
+
+struct kgsl_drm_gem_info_data {
+	struct drm_file *filp;
+	struct seq_file *m;
 };
 
 static int
