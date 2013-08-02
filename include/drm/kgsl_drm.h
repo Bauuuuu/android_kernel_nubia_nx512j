@@ -241,4 +241,6 @@ struct drm_kgsl_gem_cache_ops {
 	uint32_t length;
 };
 
+extern void mdss_mdp_clk_ctrl(int enable, int isr);
+
 #endif

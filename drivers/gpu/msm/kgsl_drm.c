@@ -1457,6 +1457,7 @@ kgsl_drm_irq_postinstall(struct drm_device *dev)
 		(struct drm_kgsl_private *)dev->dev_private;
 	u32 mask;
 
+	mdss_mdp_clk_ctrl(1, false);
 	mask = readl_relaxed(dev_priv->regs +
 			dev_priv->mdp_reg[MDSS_MDP_REG_INTR_EN]);
 
@@ -1470,6 +1471,8 @@ kgsl_drm_irq_postinstall(struct drm_device *dev)
 
 	dev->irq_enabled = 1;
 
+	mdss_mdp_clk_ctrl(0, false);
+
 	return 0;
 }
 
@@ -1480,7 +1483,7 @@ kgsl_drm_irq_uninstall(struct drm_device *dev)
 		(struct drm_kgsl_private *)dev->dev_private;
 	u32 mask;
 
-
+	mdss_mdp_clk_ctrl(1, false);
 	mask = readl_relaxed(dev_priv->regs + dev_priv->mdp_reg[MDSS_MDP_REG_INTR_EN]);
 
 	DRM_DEBUG("%s:regs[0x%x]\n", __func__, (int)dev_priv->regs);
@@ -1492,6 +1495,7 @@ kgsl_drm_irq_uninstall(struct drm_device *dev)
 	mdp_drm_intr_mask = 0;
 	dev->irq_enabled = 0;
 
+	mdss_mdp_clk_ctrl(0, false);
 }
 
 int kgsl_gem_prime_handle_to_fd(struct drm_device *dev,
