@@ -1333,6 +1333,9 @@ kgsl_drm_get_vblank_counter(struct drm_device *dev, int crtc)
 static int
 kgsl_drm_enable_vblank(struct drm_device *dev, int crtc)
 {
+	struct drm_kgsl_private *dev_priv =
+		(struct drm_kgsl_private *)dev->dev_private;
+
 	DRM_DEBUG("%s:crtc[%d]\n", __func__, crtc);
 
 	if (crtc >= DRM_KGSL_CRTC_MAX) {
@@ -1343,6 +1346,7 @@ kgsl_drm_enable_vblank(struct drm_device *dev, int crtc)
 
 	switch (crtc) {
 	case DRM_KGSL_CRTC_FAKE:
+		mutex_lock(&dev_priv->fake_vbl_lock);
 		dev_priv->fake_vbl = true;
 		schedule_work(&dev_priv->fake_vbl_work);
 		break;
@@ -1786,6 +1790,9 @@ static int kgsl_drm_load(struct drm_device *dev, unsigned long flags)
 	/* acquire interrupt */
 	dev_priv->irq = platform_get_irq_byname(pdev, KGSL_DRM_IRQ);
 
+	/* init workqueue for fake vsync */
+	INIT_WORK(&dev_priv->fake_vbl_work, kgsl_drm_fake_vblank_handler);
+
 	/* store dev structure */
 	dev_priv->drm_dev = dev;
 
@@ -1797,9 +1804,16 @@ static int kgsl_drm_load(struct drm_device *dev, unsigned long flags)
 		dev_priv->irq, (int)res->start, (int)dev_priv->regs,
 		(int)dev_priv->reg_size);
 
-	/* initialize variables related to vblank and waitqueue. */
-	ret = drm_vblank_init(dev, DRM_KGSL_CRTC_MAX);
 
+	/*
+	 * initialize variables related to vblank and waitqueue.
+	 * 1 : primary device(LCD)
+	 * 2 : secondary device(HDMI)
+	 * 3 : writeback 0 device(Rotator)
+	 * 4 : writeback 2 device(WFD)
+	 * 5 : fake vblank device(Standby mode)
+	 */
+	ret = drm_vblank_init(dev, DRM_KGSL_CRTC_MAX);
 	if (ret) {
 		DRM_ERROR("failed to init vblank.\n");
 		return ret;
