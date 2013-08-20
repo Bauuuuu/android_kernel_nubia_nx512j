@@ -93,6 +93,9 @@ struct drm_kgsl_private {
         u32 vsync_irq;
 	u32 mdp_reg[3];
 	u32 irq_mask[DRM_KGSL_CRTC_MAX];
+	bool fake_vbl;
+	struct work_struct fake_vbl_work;
+	struct mutex fake_vbl_lock;
 };
 
 struct drm_kgsl_gem_object {
@@ -1329,16 +1332,36 @@ kgsl_drm_enable_vblank(struct drm_device *dev, int crtc)
 		return -EINVAL;
 	}
 
+	switch (crtc) {
+	case DRM_KGSL_CRTC_FAKE:
+		dev_priv->fake_vbl = true;
+		schedule_work(&dev_priv->fake_vbl_work);
+		break;
+	default:
+		break;
+	}
+
 	return 0;
 }
 
 static void
 kgsl_drm_disable_vblank(struct drm_device *dev, int crtc)
 {
+	struct drm_kgsl_private *dev_priv =
+		(struct drm_kgsl_private *)dev->dev_private;
+
 	DRM_DEBUG("%s:crtc[%d]\n", __func__, crtc);
 
 	if (crtc != 0)
 		DRM_ERROR("failed to disable vblank.\n");
+
+	switch (crtc) {
+	case DRM_KGSL_CRTC_FAKE:
+		dev_priv->fake_vbl = false;
+		break;
+	default:
+		break;
+	}
 }
 
 static irqreturn_t
@@ -1370,6 +1393,22 @@ kgsl_drm_irq_handler(DRM_IRQ_ARGS)
 
 irq_done:
 	return IRQ_HANDLED;
+}
+
+static void
+kgsl_drm_fake_vblank_handler(struct work_struct *work)
+{
+	struct drm_kgsl_private *dev_priv = container_of(work,
+			struct drm_kgsl_private, fake_vbl_work);
+
+	/* refresh rate is about 60Hz. */
+	usleep_range(15000, 16000);
+
+	DRM_DEBUG("%s\n", __func__);
+	drm_handle_vblank(dev_priv->drm_dev, DRM_KGSL_CRTC_FAKE);
+
+	if (dev_priv->fake_vbl)
+		schedule_work(&dev_priv->fake_vbl_work);
 }
 
 static void
