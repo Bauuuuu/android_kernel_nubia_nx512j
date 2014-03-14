@@ -19,6 +19,7 @@
 #include <linux/platform_device.h>
 #include <linux/regulator/driver.h>
 #include <linux/regulator/machine.h>
+#include <linux/regulator/of_regulator.h>
 #include <linux/gpio.h>
 #include <linux/slab.h>
 
@@ -178,6 +179,60 @@ static const struct regulator_init_data arizona_ldo1_default = {
 	.num_consumer_supplies = 1,
 };
 
+
+#ifdef CONFIG_OF
+static int arizona_ldo1_of_get_pdata(struct arizona *arizona,
+				     struct regulator_config *config)
+{
+	struct arizona_pdata *pdata = &arizona->pdata;
+	struct arizona_ldo1 *ldo1 = config->driver_data;
+	struct device_node *init_node, *dcvdd_node;
+	struct regulator_init_data *init_data;
+
+	arizona_of_get_named_gpio(arizona, "wlf,ldoena", true, &pdata->ldoena);
+
+	init_node = of_get_child_by_name(arizona->dev->of_node, "ldo1");
+	dcvdd_node = of_parse_phandle(arizona->dev->of_node, "DCVDD-supply", 0);
+
+	if (init_node) {
+		config->of_node = init_node;
+
+		init_data = of_get_regulator_init_data(arizona->dev, init_node);
+
+		if (init_data) {
+			init_data->consumer_supplies = &ldo1->supply;
+			init_data->num_consumer_supplies = 1;
+
+			if (dcvdd_node && dcvdd_node != init_node)
+				arizona->external_dcvdd = true;
+
+			pdata->ldo1 = init_data;
+		}
+	} else if (dcvdd_node) {
+		arizona->external_dcvdd = true;
+	}
+
+	of_node_put(dcvdd_node);
+
+	return 0;
+}
+
+static void arizona_ldo1_of_put_pdata(struct regulator_config *config)
+{
+	of_node_put(config->of_node);
+}
+#else
+static inline int arizona_ldo1_of_get_pdata(struct arizona *arizona,
+					    struct regulator_config *config)
+{
+	return 0;
+}
+
+static inline void arizona_ldo1_of_put_pdata(struct regulator_config *config)
+{
+}
+#endif
+
 static int arizona_ldo1_probe(struct platform_device *pdev)
 {
 	struct arizona *arizona = dev_get_drvdata(pdev->dev.parent);
@@ -217,6 +272,14 @@ static int arizona_ldo1_probe(struct platform_device *pdev)
 	config.dev = arizona->dev;
 	config.driver_data = ldo1;
 	config.regmap = arizona->regmap;
+<<<<<<< HEAD
+=======
+
+	ret = arizona_ldo1_of_get_pdata(arizona, &config);
+	if (ret < 0)
+		return ret;
+
+>>>>>>> b41da0e... regulator: arizona-ldo1: Add processing of init_data from device tree
 	config.ena_gpio = arizona->pdata.ldoena;
 
 	if (arizona->pdata.ldo1)
@@ -231,6 +294,8 @@ static int arizona_ldo1_probe(struct platform_device *pdev)
 			ret);
 		return ret;
 	}
+
+	arizona_ldo1_of_put_pdata(&config);
 
 	platform_set_drvdata(pdev, ldo1);
 
