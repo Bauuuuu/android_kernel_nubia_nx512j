@@ -192,8 +192,6 @@ static const struct regulator_init_data arizona_ldo1_default = {
 	.num_consumer_supplies = 1,
 };
 
-
-#ifdef CONFIG_OF
 static int arizona_ldo1_of_get_pdata(struct arizona *arizona,
 				     struct regulator_config *config)
 {
@@ -232,22 +230,6 @@ static int arizona_ldo1_of_get_pdata(struct arizona *arizona,
 
 	return 0;
 }
-
-static void arizona_ldo1_of_put_pdata(struct regulator_config *config)
-{
-	of_node_put(config->of_node);
-}
-#else
-static inline int arizona_ldo1_of_get_pdata(struct arizona *arizona,
-					    struct regulator_config *config)
-{
-	return 0;
-}
-
-static inline void arizona_ldo1_of_put_pdata(struct regulator_config *config)
-{
-}
-#endif
 
 static int arizona_ldo1_probe(struct platform_device *pdev)
 {
@@ -290,9 +272,13 @@ static int arizona_ldo1_probe(struct platform_device *pdev)
 	config.driver_data = ldo1;
 	config.regmap = arizona->regmap;
 
-	ret = arizona_ldo1_of_get_pdata(arizona, &config);
-	if (ret < 0)
-		return ret;
+	if (IS_ENABLED(CONFIG_OF)) {
+		if (!dev_get_platdata(arizona->dev)) {
+			ret = arizona_ldo1_of_get_pdata(arizona, &config);
+			if (ret < 0)
+				return ret;
+		}
+	}
 
 	config.ena_gpio = arizona->pdata.ldoena;
 
@@ -308,8 +294,6 @@ static int arizona_ldo1_probe(struct platform_device *pdev)
 			ret);
 		return ret;
 	}
-
-	arizona_ldo1_of_put_pdata(&config);
 
 	platform_set_drvdata(pdev, ldo1);
 
