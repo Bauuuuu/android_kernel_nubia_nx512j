@@ -43,7 +43,7 @@ static struct apr_client client[APR_DEST_MAX][APR_CLIENT_MAX];
 
 static wait_queue_head_t dsp_wait;
 static wait_queue_head_t modem_wait;
-static bool is_modem_up;
+static bool is_modem_up = 0;
 /* Subsystem restart: QDSP6 data, functions */
 static struct workqueue_struct *apr_reset_workqueue;
 static void apr_reset_deregister(struct work_struct *work);
@@ -358,8 +358,8 @@ struct apr_svc *apr_register(char *dest, char *svc_name, apr_fn svc_fn,
 	} else if (dest_id == APR_DEST_MODEM) {
 		if (apr_get_modem_state() == APR_SUBSYS_DOWN) {
 			if (is_modem_up) {
-				pr_err("%s: modem shutdown due to SSR, ret",
-					__func__);
+				pr_err("%s: modem shutdown \
+					due to SSR, return", __func__);
 				return NULL;
 			}
 			pr_debug("%s: Wait for modem to bootup\n", __func__);
