@@ -351,6 +351,7 @@ struct smb135x_chg {
 	bool				inhibit_disabled;
 	int				fastchg_current_arr_size;
 	int				*fastchg_current_table;
+	int				fastchg_ma;
 	u8				irq_cfg_mask[3];
 	int				otg_oc_count;
 
@@ -3724,6 +3725,10 @@ static int smb_parse_dt(struct smb135x_chg *chip)
 						&chip->bms_psy_name);
 	if (rc)
 		chip->bms_psy_name = NULL;
+
+	rc = of_property_read_u32(node, "qcom,fastchg-ma", &chip->fastchg_ma);
+	if (rc < 0)
+		chip->fastchg_ma = -EINVAL;
 
 	chip->soft_vfloat_comp_disabled = of_property_read_bool(node,
 					"qcom,soft-vfloat-comp-disabled");
