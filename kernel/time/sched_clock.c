@@ -69,6 +69,7 @@ struct clock_data {
 
 static struct hrtimer sched_clock_timer;
 static int irqtime = -1;
+static int initialized;
 
 core_param(irqtime, irqtime, int, 0400);
 
@@ -215,6 +216,11 @@ unsigned long long notrace sched_clock(void)
 	return sched_clock_func();
 }
 
+int sched_clock_initialized(void)
+{
+	return initialized;
+}
+
 void __init sched_clock_postinit(void)
 {
 	/*
@@ -233,6 +239,8 @@ void __init sched_clock_postinit(void)
 	hrtimer_init(&sched_clock_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	sched_clock_timer.function = sched_clock_poll;
 	hrtimer_start(&sched_clock_timer, cd.wrap_kt, HRTIMER_MODE_REL);
+
+	initialized = 1;
 }
 
 static int sched_clock_suspend(void)
