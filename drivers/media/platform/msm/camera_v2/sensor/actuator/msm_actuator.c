@@ -282,8 +282,11 @@ static int32_t msm_actuator_piezo_move_focus(
 		return -EFAULT;
 	}
 
-	if (num_steps == 0)
-		return rc;
+	if (num_steps <= 0 || num_steps > MAX_NUMBER_OF_STEPS) {
+		pr_err("num_steps out of range = %d\n",
+			num_steps);
+		return -EFAULT;
+	}
 
 	if (dest_step_position > a_ctrl->total_steps) {
 		pr_err("Step pos greater than total steps = %d\n",
@@ -661,8 +664,12 @@ static int32_t msm_actuator_set_position(
 /* ZTEMT: zhanglilang add manual AF compensation for rohm_bu64297gwz  -----end */
 	struct msm_camera_i2c_reg_setting reg_setting;
 	CDBG("%s Enter %d\n", __func__, __LINE__);
-	if (set_pos->number_of_steps  == 0)
-		return rc;
+	if (set_pos->number_of_steps <= 0 ||
+		set_pos->number_of_steps > MAX_NUMBER_OF_STEPS) {
+		pr_err("num_steps out of range = %d\n",
+			set_pos->number_of_steps);
+		return -EFAULT;
+	}
   // ZTEMT: fuyipeng add manual AF for imx234  -----start
     pr_err("msm_actuator_set_position---act_name:%s \n", a_ctrl->act_name);
      if(!strncmp(a_ctrl->act_name, "bu64291gwz_t4k37_msm8939", 32)){
