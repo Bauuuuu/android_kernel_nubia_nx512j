@@ -770,10 +770,11 @@ void msm_cpp_do_tasklet(unsigned long data)
 			if (tx_fifo[i] == MSM_CPP_MSG_ID_CMD) {
 				cmd_len = tx_fifo[i+1];
 				msg_id = tx_fifo[i+2];
-				if (msg_id == MSM_CPP_MSG_ID_FRAME_ACK) {
+				if ((msg_id == MSM_CPP_MSG_ID_FRAME_ACK)
+					&& (atomic_read(&cpp_timer.used))) {
 					CPP_DBG("Frame done!!\n");
-					/* delete CPP timer */
 					CPP_DBG("delete timer.\n");
+					/* delete CPP timer */
 					msm_cpp_clear_timer(cpp_dev);
 					msm_cpp_notify_frame_done(cpp_dev, 0);
 				} else if ((msg_id ==
