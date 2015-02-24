@@ -816,21 +816,21 @@ void spdm_init_debugfs(struct device *dev)
 			    &enable_fops);
 	debugfs_create_file("pl_freqs", 0600, data->debugfs_dir, data,
 			    &pl_fops);
-	debugfs_create_file("rej_rate_low", 0x700, data->debugfs_dir, data,
+	debugfs_create_file("rej_rate_low", 0600, data->debugfs_dir, data,
 			    &rrl_fops);
-	debugfs_create_file("rej_rate_med", 0x700, data->debugfs_dir, data,
+	debugfs_create_file("rej_rate_med", 0600, data->debugfs_dir, data,
 			    &rrm_fops);
-	debugfs_create_file("rej_rate_high", 0x700, data->debugfs_dir, data,
+	debugfs_create_file("rej_rate_high", 0600, data->debugfs_dir, data,
 			    &rrh_fops);
-	debugfs_create_file("resp_time_low", 0x700, data->debugfs_dir, data,
+	debugfs_create_file("resp_time_low", 0600, data->debugfs_dir, data,
 			    &rtl_fops);
-	debugfs_create_file("resp_time_med", 0x700, data->debugfs_dir, data,
+	debugfs_create_file("resp_time_med", 0600, data->debugfs_dir, data,
 			    &rtm_fops);
-	debugfs_create_file("resp_time_high", 0x700, data->debugfs_dir, data,
+	debugfs_create_file("resp_time_high", 0600, data->debugfs_dir, data,
 			    &rth_fops);
-	debugfs_create_file("cci_resp_time_low", 0x700, data->debugfs_dir, data,
+	debugfs_create_file("cci_resp_time_low", 0600, data->debugfs_dir, data,
 			    &ccil_fops);
-	debugfs_create_file("cci_resp_time_med", 0x700, data->debugfs_dir, data,
+	debugfs_create_file("cci_resp_time_med", 0600, data->debugfs_dir, data,
 			    &ccim_fops);
 	debugfs_create_file("cci_resp_time_high", 0600, data->debugfs_dir,
 			    data, &ccih_fops);
