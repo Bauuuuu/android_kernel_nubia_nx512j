@@ -299,6 +299,9 @@ static void __iomem *virt_dbgbase;
 #define APCS_C1_PLL_CONFIG_CTL				0x00014
 #define APCS_C1_PLL_STATUS				0x0001C
 
+#define CLKFLAG_WAKEUP_CYCLES				0x0
+#define CLKFLAG_SLEEP_CYCLES				0x0
+
 /* Mux source select values */
 #define gcc_xo_source_val		0
 #define xo_a_clk_source_val		0
@@ -2328,6 +2331,19 @@ static struct branch_clk gcc_oxili_gmem_clk = {
 	},
 };
 
+static struct gate_clk gcc_oxili_gmem_gate_clk = {
+	.en_reg = OXILI_GMEM_CBCR,
+	.en_mask = BIT(0),
+	.delay_us = 50,
+	.base = &virt_bases[GCC_BASE],
+	.c = {
+		.dbg_name = "gcc_oxili_gmem_gate_clk",
+		.parent = &gfx3d_clk_src.c,
+		.ops = &clk_ops_gate,
+		CLK_INIT(gcc_oxili_gmem_gate_clk.c),
+	},
+};
+
 static struct local_vote_clk gcc_apss_tcu_clk;
 static struct branch_clk gcc_bimc_gfx_clk = {
 	.cbcr_reg = BIMC_GFX_CBCR,
@@ -3268,7 +3284,6 @@ static struct clk_lookup msm_clocks_lookup[] = {
 	CLK_LIST(gcc_camss_vfe0_clk),
 	CLK_LIST(gcc_camss_vfe_ahb_clk),
 	CLK_LIST(gcc_camss_vfe_axi_clk),
-	CLK_LIST(gcc_oxili_gmem_clk),
 	CLK_LIST(gcc_gp1_clk),
 	CLK_LIST(gcc_gp2_clk),
 	CLK_LIST(gcc_gp3_clk),
@@ -3312,6 +3327,14 @@ static struct clk_lookup msm_clocks_lookup[] = {
 
 	/* QoS Reference clock */
 	CLK_LIST(gcc_snoc_qosgen_clk),
+};
+
+static struct clk_lookup msm_clocks_lookup_v1[] = {
+	CLK_LIST(gcc_oxili_gmem_clk),
+};
+
+static struct clk_lookup msm_clocks_lookup_v3[] = {
+	CLK_LIST(gcc_oxili_gmem_gate_clk),
 };
 
 /* Please note that the order of reg-names is important */
@@ -3463,9 +3486,6 @@ static int msm_gcc_probe(struct platform_device *pdev)
 
 	clk_set_rate(&apss_ahb_clk_src.c, 19200000);
 	clk_prepare_enable(&apss_ahb_clk_src.c);
-
-	if (compat_bin)
-		gcc_bimc_gfx_clk.c.depends = NULL;
 
 	dev_info(&pdev->dev, "Registered GCC clocks\n");
 
