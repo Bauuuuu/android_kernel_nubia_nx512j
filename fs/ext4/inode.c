@@ -2986,7 +2986,7 @@ static int __ext4_readpage(struct page *page)
 		ret = ext4_readpage_inline(inode, page);
 
 	if (ret == -EAGAIN)
-		return mpage_readpage(page, ext4_get_block);
+		return ext4_mpage_readpages(page->mapping, NULL, page, 1);
 
 	return ret;
 }
@@ -3009,7 +3009,7 @@ __ext4_readpages(struct address_space *mapping,
 	if (ext4_has_inline_data(inode))
 		return 0;
 
-	return mpage_readpages(mapping, pages, nr_pages, ext4_get_block);
+	return ext4_mpage_readpages(mapping, pages, NULL, nr_pages);
 }
 
 static int
