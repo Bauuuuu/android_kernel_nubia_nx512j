@@ -32,6 +32,7 @@ struct wcnss_wlan_config {
 	int	is_pronto_vt;
 	int	is_pronto_v3;
 	void __iomem	*msm_wcnss_base;
+	int	iris_id;
 	int	vbatt;
 };
 
