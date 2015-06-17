@@ -163,8 +163,8 @@ void set_power_suspend_state(int new_state)
 	#ifdef CONFIG_POWERSUSPEND_DEBUG
 	} else {
 		pr_info("[POWERSUSPEND] state change requested, but unchanged ?! Ignored !\n");
-	}
 	#endif
+        }
 
 }
 
