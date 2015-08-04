@@ -333,7 +333,7 @@ struct smb135x_chg {
 	bool				usb_present;
 	bool				dc_present;
 	bool				usb_slave_present;
-	bool				dc_ov;
+	bool				dc_uv;
 	bool				usb_uv;
 
 	bool				bmd_algo_disabled;
@@ -2502,6 +2502,7 @@ static int dcin_uv_handler(struct smb135x_chg *chip, u8 rt_stat)
 	 */
 	bool dc_present = !rt_stat;
 
+	chip->dc_uv = !!rt_stat;
 	pr_debug("chip->dc_present = %d dc_present = %d\n",
 			chip->dc_present, dc_present);
 
@@ -2528,10 +2529,7 @@ static int dcin_ov_handler(struct smb135x_chg *chip, u8 rt_stat)
 	 */
 	bool dc_present = !rt_stat;
 
-	pr_debug("chip->dc_present = %d dc_present = %d\n",
-			chip->dc_present, dc_present);
-
-	chip->dc_ov = !!rt_stat;
+	pr_debug("OV status = %d\n", !!rt_stat);
 
 	if (chip->dc_present && !dc_present) {
 		/* dc removed */
@@ -2540,9 +2538,13 @@ static int dcin_ov_handler(struct smb135x_chg *chip, u8 rt_stat)
 	}
 
 	if (!chip->dc_present && dc_present) {
-		/* dc inserted */
-		chip->dc_present = dc_present;
-		handle_dc_insertion(chip);
+		if (!chip->dc_uv) {
+			/* dc inserted */
+			chip->dc_present = dc_present;
+			handle_dc_insertion(chip);
+		} else {
+			pr_debug("DC unplugged from OV\n");
+		}
 	}
 	return 0;
 }
@@ -3265,6 +3267,7 @@ static int determine_initial_status(struct smb135x_chg *chip)
 	chip->usb_uv = !!(reg & IRQ_E_USB_UV_BIT);
 	chip->usb_present = !(reg & IRQ_E_USB_OV_BIT)
 				&& !(reg & IRQ_E_USB_UV_BIT);
+	chip->dc_uv = !!(reg & IRQ_E_DC_UV_BIT);
 	chip->dc_present = !(reg & IRQ_E_DC_OV_BIT) && !(reg & IRQ_E_DC_UV_BIT);
 
 	if (chip->usb_present)
