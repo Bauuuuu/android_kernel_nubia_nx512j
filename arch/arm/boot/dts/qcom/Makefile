@@ -38,7 +38,13 @@ dtb-$(CONFIG_ARCH_MSM8909) += msm8909-sim.dtb \
 	msm8909-mtp-smb1360.dtb \
 	msm8909-1gb-qrd-skua.dtb \
 	msm8909-1gb-cdp.dtb \
-	msm8909-1gb-mtp.dtb
+	msm8909-1gb-mtp.dtb \
+	msm8208-qhd-rcm.dtb \
+
+	msm8909-pm8916-w-mtp.dtb \
+	msm8909-pm8916-w-cdp.dtb \
+	apq8009-pm8916-w-mtp.dtb \
+	apq8009-pm8916-w-cdp.dtb	
 ifeq ($(CONFIG_MACH_NUBIA_MSM8939),y)
 dtb-$(CONFIG_ARCH_MSM8916) += msm8939-NX512J.dtb
 else	
