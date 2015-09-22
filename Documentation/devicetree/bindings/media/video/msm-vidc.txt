@@ -106,6 +106,9 @@ Optional properties:
   idle message when it is in idle state.
 - qcom,enable-minimum-voting = A bool to limit the bandwidth vote to the
   lowest vector over an active session.
+- qcom,pm-qos-latency-us = The latency used to vote for QOS power manager. This
+value is typically max(latencies of every cluster at all power levels) + 1
+
 
 Example:
 
