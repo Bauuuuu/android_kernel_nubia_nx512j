@@ -450,7 +450,7 @@ static void qcrypto_ce_set_bus(struct crypto_engine *pengine,
 	int ret = 0;
 
 	if (high_bw_req) {
-		//pm_stay_awake(&pengine->pdev->dev);
+		pm_stay_awake(&pengine->pdev->dev);
 		ret = qce_enable_clk(pengine->qce);
 		if (ret) {
 			pr_err("%s Unable enable clk\n", __func__);
@@ -464,6 +464,7 @@ static void qcrypto_ce_set_bus(struct crypto_engine *pengine,
 			qce_disable_clk(pengine->qce);
 			goto clk_err;
 		}
+
 
 	} else {
 
@@ -484,11 +485,11 @@ static void qcrypto_ce_set_bus(struct crypto_engine *pengine,
 						__func__);
 			goto clk_err;
 		}
-		//pm_relax(&pengine->pdev->dev);
+		pm_relax(&pengine->pdev->dev);
 	}
 	return;
 clk_err:
-	//pm_relax(&pengine->pdev->dev);
+	pm_relax(&pengine->pdev->dev);
 	return;
 
 }
@@ -1050,6 +1051,7 @@ static void _qcrypto_remove_engine(struct crypto_engine *pengine)
 	cancel_work_sync(&pengine->bw_reaper_ws);
 	cancel_work_sync(&pengine->bw_allocate_ws);
 	del_timer_sync(&pengine->bw_reaper_timer);
+	device_init_wakeup(&pengine->pdev->dev, false);
 
 	if (pengine->bus_scale_handle != 0)
 		msm_bus_scale_unregister_client(pengine->bus_scale_handle);
@@ -1991,6 +1993,12 @@ again:
 	}
 
 	backlog_eng = crypto_get_backlog(&pengine->req_queue);
+
+	/* make sure it is in high bandwidth state */
+	if (pengine->bw_state != BUS_HAS_BANDWIDTH) {
+		spin_unlock_irqrestore(&cp->lock, flags);
+		return 0;
+	}
 
 	/* try to get request from request queue of the engine first */
 	async_req = crypto_dequeue_request(&pengine->req_queue);
@@ -4498,6 +4506,7 @@ static int  _qcrypto_probe(struct platform_device *pdev)
 	pengine->active_seq = 0;
 	pengine->last_active_seq = 0;
 	pengine->check_flag = false;
+	device_init_wakeup(&pengine->pdev->dev, true);
 
 	tasklet_init(&pengine->done_tasklet, req_done, (unsigned long)pengine);
 	crypto_init_queue(&pengine->req_queue, MSM_QCRYPTO_REQ_QUEUE_LENGTH);
@@ -4891,10 +4900,11 @@ err:
 
 static int _qcrypto_engine_in_use(struct crypto_engine *pengine)
 {
-	if (pengine->req || pengine->req_queue.qlen)
+	struct crypto_priv *cp = pengine->pcp;
+
+	if (pengine->req || pengine->req_queue.qlen || cp->req_queue.qlen)
 		return 1;
-	else
-		return 0;
+	return 0;
 }
 
 static void _qcrypto_do_suspending(struct crypto_engine *pengine)
