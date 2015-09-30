@@ -501,7 +501,14 @@ long prctl_get_seccomp(void)
 }
 
 /**
- * seccomp_set_mode_strict: internal function for setting strict seccomp
+ * seccomp_set_mode: internal function for setting seccomp mode
+ * @seccomp_mode: requested mode to use
+ * @filter: optional struct sock_fprog for use with SECCOMP_MODE_FILTER
+ *
+ * This function may be called repeatedly with a @seccomp_mode of
+ * SECCOMP_MODE_FILTER to install additional filters.  Every filter
+ * successfully installed will be evaluated (in reverse order) for each system
+ * call the task makes.
  *
  * Once current->seccomp.mode is non-zero, it may not be changed.
  *
@@ -579,4 +586,5 @@ long prctl_set_seccomp(unsigned long seccomp_mode, char __user *filter)
 	default:
 		return -EINVAL;
 	}
+	return seccomp_set_mode(seccomp_mode, filter);
 }
