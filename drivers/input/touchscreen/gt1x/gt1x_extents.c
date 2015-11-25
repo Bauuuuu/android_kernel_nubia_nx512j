@@ -181,7 +181,7 @@ s32 gesture_event_handler(struct input_dev * dev)
 
 			switch (doze_buf[0]) {
 				case 0xCC:
-					key = KEY_F10;
+					key = KEY_WAKEUP;
 					break;
 				case 0x77:
 					key = KEY_F5;

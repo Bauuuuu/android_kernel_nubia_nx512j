@@ -61,7 +61,7 @@
 
 #define GTP_GESTURE_WAKEUP    1	// gesture wakeup module
 
-#define KEY_GESTURE           KEY_F10	// customize gesture-key
+#define KEY_GESTURE           KEY_WAKEUP	// customize gesture-key
 
 #define GTP_HOTKNOT           0	// hotknot module
 #define HOTKNOT_TYPE          0	// 0: hotknot in flash; 1: hotknot in driver
