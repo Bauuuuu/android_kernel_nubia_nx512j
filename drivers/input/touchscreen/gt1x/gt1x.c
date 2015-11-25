@@ -450,7 +450,7 @@ static s8 gt1x_request_input_dev(void)
 	input_set_capability(input_dev, EV_KEY, KEY_F7);
 	input_set_capability(input_dev, EV_KEY, KEY_F8);
 	input_set_capability(input_dev, EV_KEY, KEY_F9);
-	input_set_capability(input_dev, EV_KEY, KEY_F10);
+	input_set_capability(input_dev, EV_KEY, KEY_WAKEUP);
 #endif
 
 #if GTP_CHANGE_X2Y
