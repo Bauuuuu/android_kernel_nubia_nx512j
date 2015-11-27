@@ -101,8 +101,7 @@ mksysmap()
 
 sortextable()
 {
-#	${objtree}/scripts/sortextable ${1}
-    echo "hi"
+	${objtree}/scripts/sortextable ${1}
 }
 
 # Delete output files in case of error
