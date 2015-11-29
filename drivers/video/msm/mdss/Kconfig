@@ -56,3 +56,10 @@ config ZTEMT_LCD_DISP_PREFERENCES
 config ZTEMT_LCD_BACKLIGHT_LINEAR_CONTROL_METHOLD
      bool "ztemt lcd backlight linear control methold"
      default n
+
+config FB_MSM_MDSS_KCAL_CTRL
+	depends on FB_MSM_MDSS
+	bool "MDSS color control"
+	---help---
+	  Enable sysfs for post-processing control of mdss-mdp5 display
+	  controllers in MDSS.
