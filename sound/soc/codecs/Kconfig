@@ -570,9 +570,3 @@ config SND_SOC_MSM_HDMI_CODEC_RX
 	help
 	HDMI audio drivers should be built only if the platform
         supports hdmi panel.
-
-config ZEN_SOUND
-	bool "Zen Sound Engine"
-	default y
-	help
-		Zen Sound engine by Haikal Izzuddin (aka haikalizz)
