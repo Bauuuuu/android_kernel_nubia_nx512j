@@ -22,7 +22,7 @@
 #include <linux/qpnp/pwm.h>
 #include <linux/err.h>
 
-#ifdef CONFIG_POWERSUSPEND
+ifdef CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
 #endif
 
@@ -158,7 +158,7 @@ u32 mdss_dsi_panel_cmd_read(struct mdss_dsi_ctrl_pdata *ctrl, char cmd0,
 	return 0;
 }
 
-void mdss_dsi_panel_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl,
+static void mdss_dsi_panel_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl,
 			struct dsi_panel_cmds *pcmds)
 {
 	struct dcs_cmd_req cmdreq;
