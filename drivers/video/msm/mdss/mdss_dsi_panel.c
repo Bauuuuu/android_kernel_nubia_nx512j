@@ -22,12 +22,11 @@
 #include <linux/qpnp/pwm.h>
 #include <linux/err.h>
 
-ifdef CONFIG_POWERSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
 #endif
 
 #include "mdss_dsi.h"
-#include "mdss_livedisplay.h"
 
 #include "zte_lcd_avdd.h"
 #include "zte_lcd_dsi.h"
