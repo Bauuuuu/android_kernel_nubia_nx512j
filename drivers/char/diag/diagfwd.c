@@ -1140,8 +1140,10 @@ int diag_process_apps_pkt(unsigned char *buf, int len)
 		driver->apps_rsp_buf[0] = *buf;
 		encode_rsp_and_send(0);
 		msleep(5000);
+#ifdef CONFIG_MSM_DLOAD_MODE
 		/* call download API */
 		msm_set_download_mode(1);
+#endif
 		msm_set_restart_mode(RESTART_DLOAD);
 		printk(KERN_CRIT "diag: download mode set, Rebooting SoC..\n");
 		kernel_restart(NULL);
