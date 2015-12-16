@@ -172,6 +172,11 @@ static int dload_set(const char *val, struct kernel_param *kp)
 
 	return 0;
 }
+void msm_set_download_mode(int mode)
+{
+	download_mode = mode;
+}
+EXPORT_SYMBOL(msm_set_download_mode);
 #else
 #define set_dload_mode(x) do {} while (0)
 
@@ -192,11 +197,6 @@ void msm_set_restart_mode(int mode)
 }
 EXPORT_SYMBOL(msm_set_restart_mode);
 
-void msm_set_download_mode(int mode)
-{
-	download_mode = mode;
-}
-EXPORT_SYMBOL(msm_set_download_mode);
 
 /*
  * Force the SPMI PMIC arbiter to shutdown so that no more SPMI transactions
