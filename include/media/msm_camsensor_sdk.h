@@ -5,7 +5,7 @@
 
 #define KVERSION 0x1
 
-#define MAX_POWER_CONFIG      14
+#define MAX_POWER_CONFIG      14 // wangdeyong change,default 12 is too small, for sensor imx234& imx179
 #define GPIO_OUT_LOW          (0 << 1)
 #define GPIO_OUT_HIGH         (1 << 1)
 #define CSI_EMBED_DATA        0x12
@@ -61,6 +61,20 @@ enum msm_sensor_power_seq_type_t {
 	SENSOR_VREG,
 	SENSOR_I2C_MUX,
 	SENSOR_I2C,
+};
+
+enum msm_camera_qup_i2c_write_batch_size_t {
+	MSM_CAMERA_I2C_BATCH_SIZE_1 = 1,
+	MSM_CAMERA_I2C_BATCH_SIZE_2,
+	MSM_CAMERA_I2C_BATCH_SIZE_3,
+	MSM_CAMERA_I2C_BATCH_SIZE_4,
+	MSM_CAMERA_I2C_BATCH_SIZE_5,
+	MSM_CAMERA_I2C_BATCH_SIZE_MAX,
+};
+
+enum msm_camera_qup_i2c_write_batch_t {
+	MSM_CAMREA_I2C_BATCH_DISABLE = 0,
+	MSM_CAMERA_I2C_BATCH_ENABLE,
 };
 
 enum msm_camera_i2c_reg_addr_type {
@@ -166,6 +180,12 @@ enum msm_flash_cfg_type_t {
 	CFG_FLASH_HIGH,
 };
 
+enum msm_sensor_output_format_t {
+	MSM_SENSOR_BAYER,
+	MSM_SENSOR_YCBCR,
+	MSM_SENSOR_META,
+};
+
 struct msm_sensor_power_setting {
 	enum msm_sensor_power_seq_type_t seq_type;
 	uint16_t seq_val;
@@ -212,6 +232,7 @@ struct msm_camera_sensor_slave_info {
 	uint8_t  is_init_params_valid;
 	struct msm_sensor_init_params sensor_init_params;
 	uint8_t is_flash_supported;
+	enum msm_sensor_output_format_t output_format;
 };
 
 struct msm_camera_i2c_reg_array {
@@ -226,6 +247,7 @@ struct msm_camera_i2c_reg_setting {
 	enum msm_camera_i2c_reg_addr_type addr_type;
 	enum msm_camera_i2c_data_type data_type;
 	uint16_t delay;
+	enum msm_camera_qup_i2c_write_batch_t qup_i2c_batch;
 };
 
 struct msm_camera_csid_vc_cfg {
@@ -290,6 +312,8 @@ struct region_params_t {
 	*/
 	uint16_t step_bound[2];
 	uint16_t code_per_step;
+	/* qvalue for converting float type numbers to integer format */
+	uint32_t qvalue;
 };
 
 struct reg_settings_t {
