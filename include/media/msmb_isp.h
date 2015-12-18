@@ -27,7 +27,6 @@
 #define ISP1_BIT              (0x10000 << 2)
 #define ISP_META_CHANNEL_BIT  (0x10000 << 3)
 #define ISP_SCRATCH_BUF_BIT   (0x10000 << 4)
-#define ISP_PDAF_CHANNEL_BIT   (0x10000 << 5)
 #define ISP_STATS_STREAM_BIT  0x80000000
 
 struct msm_vfe_cfg_cmd_list;
@@ -104,13 +103,6 @@ struct msm_vfe_fetch_engine_cfg {
 	uint32_t x_offset;
 	uint32_t y_offset;
 	uint32_t buf_stride;
-};
-
-struct msm_vfe_camif_subsample_cfg {
-	uint32_t irq_subsample_period;
-	uint32_t irq_subsample_pattern;
-	uint32_t pixel_skip;
-	uint32_t line_skip;
 };
 
 struct msm_vfe_camif_cfg {
@@ -483,7 +475,6 @@ struct msm_isp_event_data {
 		struct msm_isp_buf_event buf_done;
 		struct msm_isp_error_info error_info;
 	} u; /* union can have max 52 bytes */
-	uint32_t is_skip_pproc;
 };
 #ifdef CONFIG_COMPAT
 struct msm_isp_event_data32 {
