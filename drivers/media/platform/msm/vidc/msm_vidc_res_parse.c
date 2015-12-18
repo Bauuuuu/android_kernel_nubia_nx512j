@@ -108,13 +108,9 @@ static inline void msm_vidc_free_regulator_table(
 		struct regulator_info *rinfo =
 			&res->regulator_set.regulator_tbl[c];
 
-		kfree(rinfo->name);
 		rinfo->name = NULL;
 	}
 
-	/* The regulator table is one the few allocs that aren't managed, hence
-	 * free it manually */
-	kfree(res->regulator_set.regulator_tbl);
 	res->regulator_set.regulator_tbl = NULL;
 	res->regulator_set.count = 0;
 }
@@ -256,9 +252,11 @@ static int msm_vidc_load_bus_vectors(struct msm_vidc_platform_resources *res)
 	c = 0;
 
 	for_each_child_of_node(bus_node, child_node) {
+		bool passive = false;
 		u32 configs = 0;
 		struct bus_info *bus = &buses->bus_tbl[c];
 
+		passive = of_property_read_bool(child_node, "qcom,bus-passive");
 		rc = of_property_read_u32(child_node, "qcom,bus-configs",
 				&configs);
 		if (rc) {
@@ -266,14 +264,9 @@ static int msm_vidc_load_bus_vectors(struct msm_vidc_platform_resources *res)
 					"Failed to read qcom,bus-configs in %s: %d\n",
 					child_node->name, rc);
 			break;
-		} else if (!configs) {
-			dprintk(VIDC_ERR,
-					"qcom,bus-configs in %s needs to be applicable for some codec\n",
-					child_node->name);
-			rc = -EINVAL;
-			break;
 		}
 
+		bus->passive = passive;
 		bus->sessions_supported = configs;
 		bus->pdata = msm_bus_pdata_from_node(pdev, child_node);
 		if (IS_ERR_OR_NULL(bus->pdata)) {
@@ -282,8 +275,9 @@ static int msm_vidc_load_bus_vectors(struct msm_vidc_platform_resources *res)
 			break;
 		}
 
-		dprintk(VIDC_DBG, "Bus %s supports: %x\n", bus->pdata->name,
-				bus->sessions_supported);
+		dprintk(VIDC_DBG, "Bus %s supports: %x, passive: %d\n",
+				bus->pdata->name, bus->sessions_supported,
+				passive);
 		++c;
 	}
 
@@ -431,6 +425,7 @@ static int msm_vidc_load_regulator_table(
 	struct regulator_set *regulators = &res->regulator_set;
 	struct device_node *domains_parent_node = NULL;
 	struct property *domains_property = NULL;
+	int reg_count = 0;
 
 	regulators->count = 0;
 	regulators->regulator_tbl = NULL;
@@ -440,18 +435,43 @@ static int msm_vidc_load_regulator_table(
 		const char *search_string = "-supply";
 		char *supply;
 		bool matched = false;
-		struct device_node *regulator_node = NULL;
-		struct regulator_info *rinfo = NULL;
-		void *temp = NULL;
 
-		/* 1) check if current property is possibly a regulator */
+		/* check if current property is possibly a regulator */
 		supply = strnstr(domains_property->name, search_string,
 				strlen(domains_property->name) + 1);
 		matched = supply && (*(supply + strlen(search_string)) == '\0');
 		if (!matched)
 			continue;
 
-		/* 2) make sure prop isn't being misused */
+		reg_count++;
+	}
+
+	regulators->regulator_tbl = devm_kzalloc(&pdev->dev,
+			sizeof(*regulators->regulator_tbl) *
+			reg_count, GFP_KERNEL);
+
+	if (!regulators->regulator_tbl) {
+		rc = -ENOMEM;
+		dprintk(VIDC_ERR,
+			"Failed to alloc memory for regulator table\n");
+		goto err_reg_tbl_alloc;
+	}
+
+	for_each_property_of_node(domains_parent_node, domains_property) {
+		const char *search_string = "-supply";
+		char *supply;
+		bool matched = false;
+		struct device_node *regulator_node = NULL;
+		struct regulator_info *rinfo = NULL;
+
+		/* check if current property is possibly a regulator */
+		supply = strnstr(domains_property->name, search_string,
+				strlen(domains_property->name) + 1);
+		matched = supply && (supply[strlen(search_string)] == '\0');
+		if (!matched)
+			continue;
+
+		/* make sure prop isn't being misused */
 		regulator_node = of_parse_phandle(domains_parent_node,
 				domains_property->name, 0);
 		if (IS_ERR(regulator_node)) {
@@ -459,31 +479,20 @@ static int msm_vidc_load_regulator_table(
 					domains_property->name);
 			continue;
 		}
-
-		/* 3) expand our table */
-		temp = krealloc(regulators->regulator_tbl,
-				sizeof(*regulators->regulator_tbl) *
-				(regulators->count + 1), GFP_KERNEL);
-		if (!temp) {
-			rc = -ENOMEM;
-			dprintk(VIDC_ERR,
-					"Failed to alloc memory for regulator table\n");
-			goto err_reg_tbl_alloc;
-		}
-
-		regulators->regulator_tbl = temp;
 		regulators->count++;
 
-		/* 4) populate regulator info */
+		/* populate regulator info */
 		rinfo = &regulators->regulator_tbl[regulators->count - 1];
-		rinfo->name = kstrndup(domains_property->name,
-				supply - domains_property->name, GFP_KERNEL);
+		rinfo->name = devm_kzalloc(&pdev->dev,
+			(supply - domains_property->name) + 1, GFP_KERNEL);
 		if (!rinfo->name) {
 			rc = -ENOMEM;
 			dprintk(VIDC_ERR,
 					"Failed to alloc memory for regulator name\n");
 			goto err_reg_name_alloc;
 		}
+		strlcpy(rinfo->name, domains_property->name,
+			(supply - domains_property->name) + 1);
 
 		rinfo->has_hw_power_collapse = of_property_read_bool(
 			regulator_node, "qcom,support-hw-trigger");
@@ -618,9 +627,6 @@ int read_platform_resources_from_dt(
 			"qcom,use-dynamic-bw-update");
 	res->sys_idle_indicator = of_property_read_bool(pdev->dev.of_node,
 			"qcom,enable-idle-indicator");
-
-	res->minimum_vote = of_property_read_bool(pdev->dev.of_node,
-			"qcom,enable-minimum-voting");
 
 	rc = msm_vidc_load_freq_table(res);
 	if (rc) {

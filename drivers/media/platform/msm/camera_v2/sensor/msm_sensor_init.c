@@ -77,7 +77,7 @@ static int32_t msm_sensor_driver_cmd(struct msm_sensor_init_t *s_init,
 			cfg->entity_name);
 		mutex_unlock(&s_init->imutex);
 		if (rc < 0)
-			pr_err("failed: msm_sensor_driver_probe rc %d", rc);
+			pr_err("wdy failed: msm_sensor_driver_probe rc %d", rc);
 		break;
 
 	case CFG_SINIT_PROBE_DONE:

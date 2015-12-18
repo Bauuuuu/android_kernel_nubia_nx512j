@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -18,16 +18,12 @@
 #include <linux/regulator/rpm-smd-regulator.h>
 #include <linux/regulator/consumer.h>
 
-#include "t4k37_otp.h"
-#include "t4k35_otp.h"
 
 // ZTEMT: peijun add for setBacklight -----start
 #include "../../../../../../video/msm/mdss/mdss_fb.h"
 extern struct msm_fb_data_type *zte_camera_mfd;
 static int pre_bl_level = 0;
 // ZTEMT: peijun add for setBacklight -----end
-
-
 #undef CDBG
 #define CDBG(fmt, args...) pr_debug(fmt, ##args)
 
@@ -518,6 +514,7 @@ int msm_sensor_match_id(struct msm_sensor_ctrl_t *s_ctrl)
 			sensor_name);
 		return -EINVAL;
 	}
+
 	//added by congshan start
 #ifdef CONFIG_IMX234
 	if (!strcmp(sensor_name, "imx234")) {
@@ -550,29 +547,30 @@ int msm_sensor_match_id(struct msm_sensor_ctrl_t *s_ctrl)
 	}
 #endif
 	//added by congshan end
-
+	
 	rc = sensor_i2c_client->i2c_func_tbl->i2c_read(
 		sensor_i2c_client, slave_info->sensor_id_reg_addr,
 		&chipid, MSM_CAMERA_I2C_WORD_DATA);
 	if (rc < 0) {
-		pr_err("%s: %s: read id failed\n", __func__, sensor_name);
+		pr_err("wdy %s: %s: read id failed\n", __func__, sensor_name);
 		return rc;
 	}
+
 	//added by congshan start
 #ifdef CONFIG_IMX234
-	if (!strcmp(sensor_name, "imx234")) {
-		chipid >>=4;
-	}
+		if (!strcmp(sensor_name, "imx234")) {
+			chipid >>=4;
+		}
 #endif
-	
+		
 #ifdef CONFIG_IMX179
-	if (!strcmp(sensor_name, "imx179")) {
-		chipid >>=8;
-	}
+		if (!strcmp(sensor_name, "imx179")) {
+			chipid >>=8;
+		}
 #endif
 	//added by congshan end
 
-	printk("%s: read id: 0x%x expected id 0x%x:\n", __func__, chipid,
+	pr_err("wdy %s: read id: 0x%x expected id 0x%x:\n", __func__, chipid,
 		slave_info->sensor_id);
 	if (chipid != slave_info->sensor_id) {
 	  if( slave_info->sensor_id==0x5648)		
@@ -693,6 +691,8 @@ static long msm_sensor_subdev_ioctl(struct v4l2_subdev *sd,
 	case MSM_SD_SHUTDOWN:
 		msm_sensor_stop_stream(s_ctrl);
 		return 0;
+	case MSM_SD_NOTIFY_FREEZE:
+		return 0;
 	default:
 		return -ENOIOCTLCMD;
 	}
@@ -741,6 +741,7 @@ static int msm_sensor_config32(struct msm_sensor_ctrl_t *s_ctrl,
 	       break;
 	}
      // ZTEMT: peijun add for setBacklight -----end
+
 	case CFG_GET_SENSOR_INFO:
 		memcpy(cdata->cfg.sensor_info.sensor_name,
 			s_ctrl->sensordata->sensor_name,
@@ -814,6 +815,7 @@ static int msm_sensor_config32(struct msm_sensor_ctrl_t *s_ctrl,
 		conf_array.delay = conf_array32.delay;
 		conf_array.size = conf_array32.size;
 		conf_array.reg_setting = compat_ptr(conf_array32.reg_setting);
+		conf_array.qup_i2c_batch = conf_array32.qup_i2c_batch;
 
 		if (!conf_array.size) {
 			pr_err("%s:%d failed\n", __func__, __LINE__);
@@ -1053,6 +1055,7 @@ static int msm_sensor_config32(struct msm_sensor_ctrl_t *s_ctrl,
 		stop_setting->data_type = stop_setting32.data_type;
 		stop_setting->delay = stop_setting32.delay;
 		stop_setting->size = stop_setting32.size;
+		stop_setting->qup_i2c_batch = stop_setting32.qup_i2c_batch;
 
 		reg_setting = compat_ptr(stop_setting32.reg_setting);
 
@@ -1137,16 +1140,6 @@ int msm_sensor_config(struct msm_sensor_ctrl_t *s_ctrl, void __user *argp)
 			cdata->cfg.sensor_info.sensor_mount_angle);
 
 		break;
-	// zte-fuyipeng modify for T4k35 otp +++
-	case CFG_SET_OTP_INIT_PARAM:
-		if (!strncmp(s_ctrl->sensordata->sensor_name, "t4k35", 6))
-		{
-            printk("fuyipeng set t4k35 otp calibration \n ");
-			t4k35_otp_init_setting(s_ctrl);
-        }
-		
-		break;
-    // zte-fuyipeng modify for T4k35 otp ---
 	case CFG_GET_SENSOR_INIT_PARAMS:
 		cdata->cfg.sensor_init_params.modes_supported =
 			s_ctrl->sensordata->sensor_info->modes_supported;
@@ -1200,12 +1193,6 @@ int msm_sensor_config(struct msm_sensor_ctrl_t *s_ctrl, void __user *argp)
 			rc = -EFAULT;
 			break;
 		}
-
-         if (!strncmp(s_ctrl->sensordata->sensor_name, "t4k37_qtech_f4k37ab", 32))
-         	{
-                 printk("start t4k37 lsc and awb calibration \n ");
-		  t4k37_otp_init_setting(s_ctrl);
-		 }
 
 		conf_array.reg_setting = reg_setting;
 		rc = s_ctrl->sensor_i2c_client->i2c_func_tbl->i2c_write_table(
@@ -1423,47 +1410,6 @@ int msm_sensor_config(struct msm_sensor_ctrl_t *s_ctrl, void __user *argp)
 			rc = -EFAULT;
 			break;
 		}
-		//added by congshan start
-#if (defined(CONFIG_N958ST_CAMERA)|| defined(CONFIG_N918ST_CAMERA))
-		if (!strncmp(dev_name(&s_ctrl->pdev->dev),"0.qcom,camera",sizeof(dev_name(&s_ctrl->pdev->dev)))){
-			enum msm_camera_i2c_reg_addr_type temp_addr_type;
-			int32_t lens_position = 500;
-			uint16_t addr = 0;
-			uint16_t data = 0;
-			//printk("sssssssss\n");
-			lens_position = 300;
-			lens_position = lens_position | 0xF400;
-			addr = (lens_position & 0xFF00) >> 8;
-			lens_position = 300;
-			data = lens_position & 0xFF;
-			temp_addr_type = s_ctrl->sensor_i2c_client->addr_type;
-			s_ctrl->sensor_i2c_client->cci_client->sid = 0x18 >> 1;
-			s_ctrl->sensor_i2c_client->addr_type = MSM_CAMERA_I2C_BYTE_ADDR;
-			s_ctrl->sensor_i2c_client->i2c_func_tbl->i2c_write(
-				s_ctrl->sensor_i2c_client, addr, data,MSM_CAMERA_I2C_BYTE_DATA);
-			msleep(20);
-			lens_position = 200;
-			lens_position = lens_position | 0xF400;
-			addr = (lens_position & 0xFF00) >> 8;
-			lens_position = 200;
-			data = lens_position & 0xFF;
-			s_ctrl->sensor_i2c_client->i2c_func_tbl->i2c_write(
-				s_ctrl->sensor_i2c_client, addr, data,MSM_CAMERA_I2C_BYTE_DATA);
-			msleep(20);
-			lens_position = 100;
-			lens_position = lens_position | 0xF400;
-			addr = (lens_position & 0xFF00) >> 8;
-			lens_position = 100;
-			data = lens_position & 0xFF;
-			s_ctrl->sensor_i2c_client->i2c_func_tbl->i2c_write(
-				s_ctrl->sensor_i2c_client, addr, data,MSM_CAMERA_I2C_BYTE_DATA);
-			msleep(20);
-			s_ctrl->sensor_i2c_client->cci_client->sid =
-				s_ctrl->sensordata->slave_info->sensor_slave_addr >> 1;
-			s_ctrl->sensor_i2c_client->addr_type = temp_addr_type;
-		}
-#endif
-		//added by congshan end
 		if (s_ctrl->func_tbl->sensor_power_down) {
 			if (s_ctrl->sensordata->misc_regulator)
 				msm_sensor_misc_regulator(s_ctrl, 0);

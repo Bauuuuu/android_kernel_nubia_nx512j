@@ -974,11 +974,16 @@ static int eeprom_config_read_cal_data32(struct msm_eeprom_ctrl_t *e_ctrl,
 		cdata.cfg.read_data.num_bytes);
 
 	/* should only be called once.  free kernel resource */
+       /*ZTEMT modified for eeprome--start*/
+       #if 0
 	if (!rc) {
 		kfree(e_ctrl->cal_data.mapdata);
 		kfree(e_ctrl->cal_data.map);
 		memset(&e_ctrl->cal_data, 0, sizeof(e_ctrl->cal_data));
 	}
+       #endif 
+        /*ZTEMT modified for eeprome--End*/
+
 	return rc;
 }
 

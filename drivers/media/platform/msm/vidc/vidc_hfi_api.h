@@ -783,7 +783,7 @@ struct hal_buffer_requirements {
 
 enum hal_priority {/* Priority increases with number */
 	HAL_PRIORITY_LOW = 10,
-	HAL_PRIORITY_MEDIUM = 20,
+	HAL_PRIOIRTY_MEDIUM = 20,
 	HAL_PRIORITY_HIGH = 30,
 	HAL_UNUSED_PRIORITY = 0x10000000,
 };
@@ -983,6 +983,14 @@ struct vidc_frame_data {
 struct vidc_seq_hdr {
 	ion_phys_addr_t seq_hdr;
 	u32 seq_hdr_len;
+};
+
+struct hal_fw_info {
+	char version[128];
+	int base_addr;
+	int register_base;
+	int register_size;
+	int irq;
 };
 
 enum hal_flush {
@@ -1259,14 +1267,6 @@ enum msm_vidc_hfi_type {
 	VIDC_HFI_Q6,
 };
 
-enum fw_info {
-	FW_BASE_ADDRESS,
-	FW_REGISTER_BASE,
-	FW_REGISTER_SIZE,
-	FW_IRQ,
-	FW_INFO_MAX,
-};
-
 enum msm_vidc_thermal_level {
 	VIDC_THERMAL_NORMAL = 0,
 	VIDC_THERMAL_LOW,
@@ -1341,14 +1341,14 @@ struct hfi_device {
 	int (*session_get_property)(void *sess, enum hal_property ptype);
 	int (*scale_clocks)(void *dev, int load, int codecs_enabled);
 	int (*vote_bus)(void *dev, struct vidc_bus_vote_data *data,
-			int num_data, int requested_level);
+			int num_data);
 	int (*unvote_bus)(void *dev);
 	int (*iommu_get_domain_partition)(void *dev, u32 flags, u32 buffer_type,
 			int *domain_num, int *partition_num);
 	int (*load_fw)(void *dev);
 	void (*unload_fw)(void *dev);
 	int (*resurrect_fw)(void *dev);
-	int (*get_fw_info)(void *dev, enum fw_info info);
+	int (*get_fw_info)(void *dev, struct hal_fw_info *fw_info);
 	int (*get_stride_scanline)(int color_fmt, int width,
 		int height,	int *stride, int *scanlines);
 	int (*session_clean)(void *sess);

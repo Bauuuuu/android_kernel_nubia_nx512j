@@ -24,15 +24,9 @@
 #define FLASH_NAME "camera-led-flash"
 #define CAM_FLASH_PINCTRL_STATE_SLEEP "cam_flash_suspend"
 #define CAM_FLASH_PINCTRL_STATE_DEFAULT "cam_flash_default"
-
-//#define CONFIG_MSMB_CAMERA_DEBUG
-#ifdef CONFIG_MSMB_CAMERA_DEBUG
+/*#define CONFIG_MSMB_CAMERA_DEBUG*/
 #undef CDBG
-#define CDBG(fmt, args...) pr_info(fmt, ##args)
-#else
-#undef CDBG
-#define CDBG(fmt, args...) do {} while(0)
-#endif
+#define CDBG(fmt, args...) pr_debug(fmt, ##args)
 
 int32_t msm_led_i2c_trigger_get_subdev_id(struct msm_led_flash_ctrl_t *fctrl,
 	void *arg)
@@ -153,6 +147,7 @@ static int msm_flash_pinctrl_init(struct msm_led_flash_ctrl_t *ctrl)
 	return 0;
 }
 
+
 int msm_flash_led_init(struct msm_led_flash_ctrl_t *fctrl)
 {
 	int rc = 0;
@@ -229,32 +224,6 @@ int msm_flash_led_init(struct msm_led_flash_ctrl_t *fctrl)
 	return rc;
 }
 
-static int msm_flash_clear_flag_mask(struct msm_led_flash_ctrl_t *fctrl)
-{
-	int rc = 0;
-	uint16_t mask = 0;
-
-	if (!fctrl) {
-		pr_err("%s:%d fctrl NULL\n", __func__, __LINE__);
-		return -EINVAL;
-	}
-
-	if (fctrl->reg_setting->flag_array && fctrl->flash_i2c_client) {
-		rc = fctrl->flash_i2c_client->i2c_func_tbl->i2c_read(
-			fctrl->flash_i2c_client,
-			fctrl->reg_setting->flag_array[0].reg_addr, &mask, 
-			MSM_CAMERA_I2C_BYTE_DATA);
-		if (rc < 0) {
-			pr_err("%s:%d failed\n", __func__, __LINE__);
-			return rc;
-		}
-
-		pr_info("%s:%d flag_mask 0x%02x\n", __func__, __LINE__, mask);
-	}
-
-	return rc;
-}
-
 int msm_flash_led_release(struct msm_led_flash_ctrl_t *fctrl)
 {
 	int rc = 0, ret = 0;
@@ -273,7 +242,6 @@ int msm_flash_led_release(struct msm_led_flash_ctrl_t *fctrl)
 		pr_err("%s:%d invalid led state\n", __func__, __LINE__);
 		return -EINVAL;
 	}
-	msm_flash_clear_flag_mask(fctrl);
 	//added by congshan start
 	if (fctrl->flash_i2c_client && fctrl->reg_setting->release_setting) {
 		rc = fctrl->flash_i2c_client->i2c_func_tbl->i2c_write_table(
@@ -338,12 +306,9 @@ int msm_flash_led_off(struct msm_led_flash_ctrl_t *fctrl)
 		pr_err("%s:%d fctrl NULL\n", __func__, __LINE__);
 		return -EINVAL;
 	}
-
 	flashdata = fctrl->flashdata;
 	power_info = &flashdata->power_info;
-
-	msm_flash_clear_flag_mask(fctrl);
-
+	CDBG("%s:%d called\n", __func__, __LINE__);
 	if (fctrl->flash_i2c_client && fctrl->reg_setting) {
 		rc = fctrl->flash_i2c_client->i2c_func_tbl->i2c_write_table(
 			fctrl->flash_i2c_client,
@@ -364,13 +329,10 @@ int msm_flash_led_low(struct msm_led_flash_ctrl_t *fctrl)
 	int rc = 0;
 	struct msm_camera_sensor_board_info *flashdata = NULL;
 	struct msm_camera_power_ctrl_t *power_info = NULL;
-	pr_info("%s:%d called\n", __func__, __LINE__);
+	CDBG("%s:%d called\n", __func__, __LINE__);
 
 	flashdata = fctrl->flashdata;
 	power_info = &flashdata->power_info;
-
-	msm_flash_clear_flag_mask(fctrl);
-
 	gpio_set_value_cansleep(
 		power_info->gpio_conf->gpio_num_info->
 		gpio_num[SENSOR_GPIO_FL_EN],
@@ -398,13 +360,10 @@ int msm_flash_led_high(struct msm_led_flash_ctrl_t *fctrl)
 	int rc = 0;
 	struct msm_camera_sensor_board_info *flashdata = NULL;
 	struct msm_camera_power_ctrl_t *power_info = NULL;
-	pr_info("%s:%d called\n", __func__, __LINE__);
+	CDBG("%s:%d called\n", __func__, __LINE__);
 
 	flashdata = fctrl->flashdata;
 	power_info = &flashdata->power_info;
-
-	msm_flash_clear_flag_mask(fctrl);
-
 	gpio_set_value_cansleep(
 		power_info->gpio_conf->gpio_num_info->
 		gpio_num[SENSOR_GPIO_FL_EN],
@@ -780,7 +739,7 @@ int msm_flash_i2c_probe(struct i2c_client *client,
 	if (!dentry)
 		pr_err("Failed to create the debugfs ledflash file");
 #endif
-	pr_info("%s:%d probe success\n", __func__, __LINE__);
+	CDBG("%s:%d probe success\n", __func__, __LINE__);
 	return 0;
 
 probe_failure:
@@ -848,7 +807,11 @@ int msm_flash_probe(struct platform_device *pdev,
 
 	rc = msm_led_flash_create_v4lsubdev(pdev, fctrl);
 
-	pr_info("%s: probe success\n", __func__);
+	//add by wangdeyong  to clear flash sensor regulator
+	msm_flash_led_init(fctrl);
+	msm_flash_led_release(fctrl);
+	//add by wangdeyong  to clear flash sensor regulator
+	CDBG("%s: probe success\n", __func__);
 	return 0;
 
 probe_failure:
