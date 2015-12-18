@@ -322,7 +322,6 @@ struct msm_camera_sensor_slave_info32 {
 	uint8_t  is_init_params_valid;
 	struct msm_sensor_init_params sensor_init_params;
 	uint8_t is_flash_supported;
-	enum msm_sensor_output_format_t output_format;
 };
 
 struct msm_camera_csid_lut_params32 {
@@ -409,7 +408,8 @@ enum msm_sensor_cfg_type_t {
 	CFG_SET_AUTOFOCUS,
 	CFG_CANCEL_AUTOFOCUS,
 	CFG_SET_STREAM_TYPE,
-	 // ZTEMT: peijun add for setBacklight -----start
+	CFG_SET_OTP_INIT_PARAM, // zte-fuyipeng modify for set otp param
+        // ZTEMT: peijun add for setBacklight -----start
 	CFG_SET_ZTE_BACKLIGHT,
 	// ZTEMT: peijun add for setBacklight -----end
 };
@@ -425,10 +425,7 @@ enum msm_actuator_cfg_type_t {
 	CFG_ACTUATOR_INIT,
 	// ZTEMT: fuyipeng add for manual AF -----start
 	CFG_SET_ACTUATOR_NAME,
-    // ZTEMT: fuyipeng add for manual AF -----end
-    /*ZTEMT:jixd add af infinity calibration -----start*/
-    CFG_SET_INFINITY_POS,
-   /*ZTEMT:jixd add af infinity calibration -----end*/  
+      // ZTEMT: fuyipeng add for manual AF -----end
 };
 
 enum msm_ois_cfg_type_t {
@@ -553,16 +550,15 @@ struct msm_actuator_cfg_data {
 	int cfgtype;
 	uint8_t is_af_supported;
 	union {
-        struct msm_actuator_move_params_t move;
-        struct msm_actuator_set_info_t set_info;
-        struct msm_actuator_get_info_t get_info;
-        struct msm_actuator_set_position_t setpos;
-        enum af_camera_name cam_name;
-        // ZTEMT: fuyipeng add for manual AF -----start
-        char *act_name;
-        // ZTEMT: fuyipeng add for manual AF -----end
-        int infinity_pos;//ZTEMT:jixd add af infinity calibration 
-    } cfg;
+		struct msm_actuator_move_params_t move;
+		struct msm_actuator_set_info_t set_info;
+		struct msm_actuator_get_info_t get_info;
+		struct msm_actuator_set_position_t setpos;
+		enum af_camera_name cam_name;
+		// ZTEMT: fuyipeng add for manual AF -----start
+             char *act_name;
+             // ZTEMT: fuyipeng add for manual AF -----end	
+	} cfg;
 };
 
 enum msm_camera_led_config_t {
@@ -657,7 +653,6 @@ struct msm_camera_i2c_reg_setting32 {
 	enum msm_camera_i2c_reg_addr_type addr_type;
 	enum msm_camera_i2c_data_type data_type;
 	uint16_t delay;
-	enum msm_camera_qup_i2c_write_batch_t qup_i2c_batch;
 };
 
 struct msm_actuator_tuning_params_t32 {
@@ -715,8 +710,7 @@ struct msm_actuator_cfg_data32 {
 		enum af_camera_name cam_name;
 		// ZTEMT: fuyipeng add for manual AF -----start
              char *act_name;
-             // ZTEMT: fuyipeng add for manual AF -----end
-        int infinity_pos;//ZTEMT:jixd add af infinity calibration 
+             // ZTEMT: fuyipeng add for manual AF -----end	
 	} cfg;
 };
 
