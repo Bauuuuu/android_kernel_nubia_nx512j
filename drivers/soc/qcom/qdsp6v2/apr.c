@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -42,7 +42,7 @@ static struct apr_client client[APR_DEST_MAX][APR_CLIENT_MAX];
 
 static wait_queue_head_t dsp_wait;
 static wait_queue_head_t modem_wait;
-static bool is_modem_up = 0;
+static bool is_modem_up;
 /* Subsystem restart: QDSP6 data, functions */
 static struct workqueue_struct *apr_reset_workqueue;
 static void apr_reset_deregister(struct work_struct *work);
@@ -352,8 +352,8 @@ struct apr_svc *apr_register(char *dest, char *svc_name, apr_fn svc_fn,
 	} else if (dest_id == APR_DEST_MODEM) {
 		if (apr_get_modem_state() == APR_SUBSYS_DOWN) {
 			if (is_modem_up) {
-				pr_err("%s: modem shutdown \
-					due to SSR, return", __func__);
+				pr_err("%s: modem shutdown due to SSR, ret",
+					__func__);
 				return NULL;
 			}
 			pr_debug("%s: Wait for modem to bootup\n", __func__);
@@ -392,7 +392,6 @@ struct apr_svc *apr_register(char *dest, char *svc_name, apr_fn svc_fn,
 		pr_err("APR: Service needs reset\n");
 		goto done;
 	}
-	svc->priv = priv;
 	svc->id = svc_id;
 	svc->dest_id = dest_id;
 	svc->client_id = client_id;
@@ -417,6 +416,7 @@ struct apr_svc *apr_register(char *dest, char *svc_name, apr_fn svc_fn,
 			svc->fn = svc_fn;
 			if (svc->port_cnt)
 				svc->svc_cnt++;
+			svc->priv = priv;
 		}
 	}
 
@@ -783,6 +783,7 @@ static int lpass_notifier_cb(struct notifier_block *this, unsigned long code,
 {
 	static int boot_count = 2;
 	struct notif_data *data = (struct notif_data *)_cmd;
+	struct scm_desc desc;
 
 	if (boot_count) {
 		boot_count--;
@@ -796,7 +797,15 @@ static int lpass_notifier_cb(struct notifier_block *this, unsigned long code,
 		dispatch_event(code, APR_DEST_QDSP6);
 		if (data && data->crashed) {
 			/* Send NMI to QDSP6 via an SCM call. */
-			scm_call_atomic1(SCM_SVC_UTIL, SCM_Q6_NMI_CMD, 0x1);
+			if (!is_scm_armv8()) {
+				scm_call_atomic1(SCM_SVC_UTIL,
+						 SCM_Q6_NMI_CMD, 0x1);
+			} else {
+				desc.args[0] = 0x1;
+				desc.arginfo = SCM_ARGS(1);
+				scm_call2_atomic(SCM_SIP_FNID(SCM_SVC_UTIL,
+						 SCM_Q6_NMI_CMD), &desc);
+			}
 			/* The write should go through before q6 is shutdown */
 			mb();
 			pr_debug("L-Notify: Q6 NMI was sent.\n");
@@ -830,9 +839,19 @@ static struct notifier_block lnb = {
 static int panic_handler(struct notifier_block *this,
 				unsigned long event, void *ptr)
 {
-	if (powered_on)
+	struct scm_desc desc;
+
+	if (powered_on) {
 		/* Send NMI to QDSP6 via an SCM call. */
-		scm_call_atomic1(SCM_SVC_UTIL, SCM_Q6_NMI_CMD, 0x1);
+		if (!is_scm_armv8()) {
+			scm_call_atomic1(SCM_SVC_UTIL, SCM_Q6_NMI_CMD, 0x1);
+		} else {
+			desc.args[0] = 0x1;
+			desc.arginfo = SCM_ARGS(1);
+			scm_call2_atomic(SCM_SIP_FNID(SCM_SVC_UTIL,
+					 SCM_Q6_NMI_CMD), &desc);
+		}
+	}
 	return NOTIFY_DONE;
 }
 
