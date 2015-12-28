@@ -124,6 +124,12 @@ config CPU_FREQ_DEFAULT_GOV_BIOSHOCK
 	help
 	  Default governor of BioShock kernel
 
+config CPU_FREQ_DEFAULT_GOV_SMARTMAX
+	bool "smartmax"
+	select CPU_FREQ_GOV_SMARTMAX
+	help
+	  Use the CPUFreq governor 'smartmax' as default
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -227,6 +233,12 @@ config CPU_FREQ_GOV_BIOSHOCK
 	depends on CPU_FREQ
 	help
 	  'bioshock' - More aggressive version of conservative
+
+config CPU_FREQ_GOV_SMARTMAX
+  tristate "'smartmax' cpufreq policy governor"	
+  select CPU_FREQ_TABLE	
+  help	
+    'smartmax' combined ondemand and smartass2
 
 config CPU_BOOST
 	tristate "Event base short term CPU freq boost"
