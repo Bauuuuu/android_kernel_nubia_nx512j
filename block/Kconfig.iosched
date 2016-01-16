@@ -83,6 +83,9 @@ config IOSCHED_BFQ
 
 config IOSCHED_SIO
 	tristate "Simple I/O scheduler"
+
+config IOSCHED_SIOPLUS
+	tristate "Simple I/O scheduler plus"
 	default y
 	---help---
 	  The Simple I/O scheduler is an extremely simple scheduler,
@@ -126,6 +129,9 @@ choice
         config DEFAULT_SIO
                bool "SIO" if IOSCHED_SIO=y
 
+	config DEFAULT_SIOPLUS
+		bool "SIOPLUS" if IOSCHED_SIOPLUS=y
+
 	config DEFAULT_BFQ
 		bool "BFQ" if IOSCHED_BFQ=y
 		help
@@ -149,6 +155,7 @@ config DEFAULT_IOSCHED
 	default "deadline" if DEFAULT_DEADLINE
 	default "row" if DEFAULT_ROW
         default "sio" if DEFAULT_SIO
+	default "sioplus" if DEFAULT_SIOPLUS
 	default "cfq" if DEFAULT_CFQ
 	default "noop" if DEFAULT_NOOP
 	default "bfq" if DEFAULT_BFQ
