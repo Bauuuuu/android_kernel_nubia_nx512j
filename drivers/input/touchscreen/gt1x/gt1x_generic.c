@@ -54,6 +54,7 @@ struct gt1x_version_info gt1x_version = {
 
 #if GTP_HAVE_TOUCH_KEY
 const u16 gt1x_touch_key_array[] = GTP_KEY_TAB;
+bool gt1x_keypad_enable = 1;
 #endif
 
 #if GTP_WITH_STYLUS && GTP_HAVE_STYLUS_KEY
@@ -1210,7 +1211,7 @@ s32 gt1x_touch_event_handler(u8 * data, struct input_dev * dev, struct input_dev
 #endif
 
 #if GTP_HAVE_TOUCH_KEY
-	if (CHK_BIT(cur_event, BIT_TOUCH_KEY) || CHK_BIT(pre_event, BIT_TOUCH_KEY)) {
+	if ((CHK_BIT(cur_event, BIT_TOUCH_KEY) || CHK_BIT(pre_event, BIT_TOUCH_KEY)) && gt1x_keypad_enable) {
 		for (i = 0; i < GTP_MAX_KEY_NUM; i++) {
 			input_report_key(dev, gt1x_touch_key_array[i], key_value & (0x01 << i));
 		}

@@ -40,6 +40,12 @@ static struct workqueue_struct *gt1x_wq;
 static const char *gt1x_ts_name = "goodix-ts";
 static const char *input_dev_phys = "input/ts";
 
+
+#ifdef GTP_HAVE_TOUCH_KEY
+extern bool gt1x_keypad_enable;
+#endif
+
+extern struct gt1x_version_info gt1x_version;
 extern u8 gt1x_wakeup_gesture;
 
 /*0 stands for hand mode, 1 stands for glove mode added by ztemt 2015.01.01*/
@@ -842,10 +848,51 @@ static ssize_t gt1x_wakeup_gesture_store(struct device *dev,
 	return size;
 }
 
+#ifdef GTP_HAVE_TOUCH_KEY
+/**
+ * gt1x_keypad_enable_show -   keypad_enable attribute show added by dianlujitao
+ * @dev: i2c device struct.
+ * @attr: device attribute.
+ * @buf: data buffer.
+ * Return data size that writes to the buffer.
+ */
+static ssize_t gt1x_keypad_enable_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", gt1x_keypad_enable);
+}
+
+/**
+ * gt1x_keypad_enable_store -   wakeup_gesture attribute store added by dianlujitao
+ * @dev: i2c device struct.
+ * @attr: device attribute.
+ * @buf: data buffer.
+ * @size:data buffer size.
+ * Return data size that writes to the buffer.
+ */
+static ssize_t gt1x_keypad_enable_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t size)
+{
+	int rc;
+	unsigned long val;
+
+	rc = kstrtoul(buf, 10, &val);
+	if (rc != 0)
+		return rc;
+
+	gt1x_keypad_enable = val ? 1 : 0;
+
+	return size;
+}
+#endif
+
 static struct device_attribute gt1x_attrs[] = {
 	__ATTR(ic_ver,         0444, gt1x_ic_ver_show,         NULL),
 	__ATTR(touch_mode,     0664, gt1x_touch_mode_show,     gt1x_touch_mode_store),
 	__ATTR(wakeup_gesture, 0664, gt1x_wakeup_gesture_show, gt1x_wakeup_gesture_store),
+#ifdef GTP_HAVE_TOUCH_KEY
+	__ATTR(keypad_enable,  0664, gt1x_keypad_enable_show,  gt1x_keypad_enable_store),
+#endif
 };
 
 /**
