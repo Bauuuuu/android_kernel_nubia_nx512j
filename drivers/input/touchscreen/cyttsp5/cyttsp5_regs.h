@@ -649,6 +649,7 @@ struct cyttsp5_report_desc_data {
 
 struct cyttsp5_sysinfo {
 	bool ready;
+	bool keypad_enable;
 	struct cyttsp5_cydata cydata;
 	struct cyttsp5_sensing_conf_data sensing_conf_data;
 	struct cyttsp5_report_desc_data desc;
