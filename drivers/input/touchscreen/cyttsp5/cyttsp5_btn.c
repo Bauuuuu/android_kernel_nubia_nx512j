@@ -33,6 +33,10 @@ static inline void cyttsp5_btn_key_action(struct cyttsp5_btn_data *bd,
 			si->btn[btn_no].state == btn_state)
 		return;
 
+	if (!si->keypad_enable) {
+		return;
+	}
+
 	si->btn[btn_no].state = btn_state;
 	input_report_key(bd->input, si->btn[btn_no].key_code, btn_state);
 	input_sync(bd->input);
@@ -200,6 +204,8 @@ static int cyttsp5_setup_input_device(struct device *dev)
 			__func__, i, bd->si->btn[i].key_code);
 		__set_bit(bd->si->btn[i].key_code, bd->input->keybit);
 	}
+
+	bd->si->keypad_enable = bd->si->num_btns ? 1 : 0;
 
 	rc = input_register_device(bd->input);
 	if (rc < 0)
