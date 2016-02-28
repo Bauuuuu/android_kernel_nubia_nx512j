@@ -1,8 +1,10 @@
+ 
 /*
  * Bricked Hotplug Driver
  *
  * Copyright (c) 2013-2014, Dennis Rassmann <showp1984@gmail.com>
  * Copyright (c) 2013-2014, Pranav Vashi <neobuddy89@gmail.com>
+ * Copyright (c) 2015-2016, AudioGod <audiogod@sonic-developers.com>
  * Copyright (c) 2010-2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -32,16 +34,17 @@
 #define DEBUG 0
 
 #define MPDEC_TAG			"bricked_hotplug"
-#define HOTPLUG_ENABLED			1
-#define MSM_MPDEC_STARTDELAY		100
-#define MSM_MPDEC_DELAY			130
-#define DEFAULT_MIN_CPUS_ONLINE		1
-#define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
-#define DEFAULT_MAX_CPUS_ONLINE_SUSP	1
-#define DEFAULT_SUSPEND_DEFER_TIME	10
-#define DEFAULT_DOWN_LOCK_DUR		500
-
-#define MSM_MPDEC_IDLE_FREQ		345600
+#define HOTPLUG_ENABLED			      0
+#define MSM_MPDEC_STARTDELAY		  100
+#define MSM_MPDEC_DELAY			      130
+#define DEFAULT_MIN_CPUS_ONLINE		  1
+#define DEFAULT_MAX_CPUS_ONLINE		  NR_CPUS
+#define DEFAULT_MAX_CPUS_ONLINE_SUSP  1
+#define DEFAULT_SUSPEND_DEFER_TIME	  10
+#define DEFAULT_DOWN_LOCK_DUR		  500
+#define NUM_LITTLE_CORES		4
+#define NUM_BIG_CORES			4
+#define MSM_MPDEC_IDLE_FREQ		      384000
 
 enum {
 	MSM_MPDEC_DISABLED = 0,
@@ -91,8 +94,8 @@ static struct cpu_hotplug {
 	.hotplug_suspend = 1,
 };
 
-static unsigned int NwNs_Threshold[8] = {12, 0, 25, 7, 30, 10, 0, 18};
-static unsigned int TwTs_Threshold[8] = {140, 0, 140, 190, 140, 190, 0, 190};
+static unsigned int NwNs_Threshold[12] = {10, 0, 17, 5, 25, 10, 40, 15, 50, 30, 0, 35};
+static unsigned int TwTs_Threshold[12] = {140, 0, 140, 190, 140, 190, 140, 190, 140, 190, 0, 190};
 
 struct down_lock {
 	unsigned int locked;
@@ -132,6 +135,8 @@ static int get_slowest_cpu(void) {
 	for_each_online_cpu(cpu) {
 		if (cpu == 0)
 			continue;
+		if (cpu >= NUM_LITTLE_CORES) /* Hack to prioritize BIG cores shutdown*/
+			slow_rate = slow_cpu = 0;
 		rate = cpufreq_quick_get(cpu);
 		if (rate > 0 && slow_rate <= rate) {
 			slow_rate = rate;
@@ -231,7 +236,7 @@ static void __ref bricked_hotplug_work(struct work_struct *work) {
 		if (cpu > 0) {
 			if (cpu_online(cpu) && !check_down_lock(cpu))
 				cpu_down(cpu);
-		}
+		} 
 		break;
 	case MSM_MPDEC_UP:
 		cpu = cpumask_next_zero(0, cpu_online_mask);
@@ -531,6 +536,10 @@ define_one_twts(twts_threshold_4, 4);
 define_one_twts(twts_threshold_5, 5);
 define_one_twts(twts_threshold_6, 6);
 define_one_twts(twts_threshold_7, 7);
+define_one_twts(twts_threshold_8, 8);
+define_one_twts(twts_threshold_9, 9);
+define_one_twts(twts_threshold_10, 10);
+define_one_twts(twts_threshold_11, 11);
 
 #define define_one_nwns(file_name, arraypos)				\
 static ssize_t show_##file_name						\
@@ -560,6 +569,10 @@ define_one_nwns(nwns_threshold_4, 4);
 define_one_nwns(nwns_threshold_5, 5);
 define_one_nwns(nwns_threshold_6, 6);
 define_one_nwns(nwns_threshold_7, 7);
+define_one_nwns(nwns_threshold_8, 8);
+define_one_nwns(nwns_threshold_9, 9);
+define_one_nwns(nwns_threshold_10, 10);
+define_one_nwns(nwns_threshold_11, 11);
 
 static ssize_t show_idle_freq (struct device *dev,
 				struct device_attribute *bricked_hotplug_attrs,
@@ -812,6 +825,10 @@ static struct attribute *bricked_hotplug_attrs[] = {
 	&dev_attr_twts_threshold_5.attr,
 	&dev_attr_twts_threshold_6.attr,
 	&dev_attr_twts_threshold_7.attr,
+	&dev_attr_twts_threshold_8.attr,
+	&dev_attr_twts_threshold_9.attr,
+	&dev_attr_twts_threshold_10.attr,
+	&dev_attr_twts_threshold_11.attr,
 	&dev_attr_nwns_threshold_0.attr,
 	&dev_attr_nwns_threshold_1.attr,
 	&dev_attr_nwns_threshold_2.attr,
@@ -820,6 +837,10 @@ static struct attribute *bricked_hotplug_attrs[] = {
 	&dev_attr_nwns_threshold_5.attr,
 	&dev_attr_nwns_threshold_6.attr,
 	&dev_attr_nwns_threshold_7.attr,
+	&dev_attr_nwns_threshold_8.attr,
+	&dev_attr_nwns_threshold_9.attr,
+	&dev_attr_nwns_threshold_10.attr,
+	&dev_attr_nwns_threshold_11.attr,
 	NULL,
 };
 
