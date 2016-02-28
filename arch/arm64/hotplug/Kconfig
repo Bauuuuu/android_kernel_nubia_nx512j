@@ -28,3 +28,10 @@ config THUNDERPLUG_CONTROL
 	help
 	  This driver uses powersuspend to take down the cpu cores
 	  on a octa core device.
+
+config HIMA_HOTPLUG
+        bool "Enable hima-hotplug cpu hotplug driver"
+        depends on STATE_NOTIFIER
+        default n
+        help
+          Generic cpu hotplugging driver for ARM SOCs
