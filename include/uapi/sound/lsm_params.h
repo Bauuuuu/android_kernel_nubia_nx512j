@@ -31,6 +31,7 @@ enum LSM_PARAM_TYPE {
 	LSM_REG_SND_MODEL,
 	LSM_DEREG_SND_MODEL,
 	LSM_CUSTOM_PARAMS,
+	LSM_POLLING_ENABLE,
 	/* driver ioctl will parse only so many params */
 	LSM_PARAMS_MAX,
 };
@@ -63,6 +64,14 @@ struct snd_lsm_gain {
 	__u16 gain;
 };
 
+/*
+ * Data for LSM_POLLING_ENABLE param_type
+ * @poll_en: Polling enable or disable
+ */
+struct snd_lsm_poll_enable {
+	bool poll_en;
+};
+
 
 struct snd_lsm_sound_model_v2 {
 	__u8 __user *data;
@@ -88,6 +97,7 @@ struct snd_lsm_detection_params {
 	enum lsm_detection_mode detect_mode;
 	__u8 num_confidence_levels;
 	bool detect_failure;
+	bool poll_enable;
 };
 
 /*
