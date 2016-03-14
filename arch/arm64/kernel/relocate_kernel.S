@@ -20,8 +20,8 @@
 #define IND_SOURCE_BIT		3
 
 #ifdef CONFIG_KEXEC_HARDBOOT
-// MSM8994 specific
-#define MPM2_MPM_PS_HOLD	0xFC4AB000
+// MSM8916 specific
+#define MPM2_MPM_PS_HOLD	0x4AB000
 #endif
 
 .data
