@@ -634,9 +634,8 @@ int radio_hci_unregister_dev(void)
 	skb_queue_purge(&hdev->rx_q);
 	skb_queue_purge(&hdev->cmd_q);
 	skb_queue_purge(&hdev->raw_q);
-	kfree(radio->fm_hdev);
-	kfree(radio->videodev);
 
+	radio->fm_hdev = NULL;
 	return 0;
 }
 EXPORT_SYMBOL(radio_hci_unregister_dev);
@@ -5212,10 +5211,10 @@ static int iris_fops_release(struct file *file)
 		return retval;
 	}
 END:
-
-		mutex_lock(&fm_smd_enable);
+	mutex_lock(&fm_smd_enable);
+	if (radio->fm_hdev != NULL)
 		radio->fm_hdev->close_smd();
-		mutex_unlock(&fm_smd_enable);
+	mutex_unlock(&fm_smd_enable);
 
 	if (retval < 0)
 		FMDERR("Err on disable FM %d\n", retval);
