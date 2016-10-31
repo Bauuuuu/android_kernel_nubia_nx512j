@@ -1531,36 +1531,6 @@ static int qcedev_check_cipher_params(struct qcedev_cipher_op_req *req,
 			__func__, total, req->data_len);
 		goto error;
 	}
-	/* Verify Source Address's */
-	for (i = 0, total = 0; i < req->entries; i++) {
-		if (total < req->data_len) {
-			if (!access_ok(VERIFY_READ,
-				(void __user *)req->vbuf.src[i].vaddr,
-					req->vbuf.src[i].len)) {
-					pr_err("%s:SRC RD_VERIFY err %d=0x%lx\n",
-						__func__, i, (uintptr_t)
-							req->vbuf.src[i].vaddr);
-					goto error;
-			}
-			total += req->vbuf.src[i].len;
-		}
-	}
-
-	/* Verify Destination Address's */
-	for (i = 0, total = 0; i < QCEDEV_MAX_BUFFERS; i++) {
-		if ((req->vbuf.dst[i].vaddr != 0) &&
-			(total < req->data_len)) {
-			if (!access_ok(VERIFY_WRITE,
-				(void __user *)req->vbuf.dst[i].vaddr,
-					req->vbuf.dst[i].len)) {
-					pr_err("%s:DST WR_VERIFY err %d=0x%lx\n",
-						__func__, i, (uintptr_t)
-							req->vbuf.dst[i].vaddr);
-					goto error;
-			}
-			total += req->vbuf.dst[i].len;
-		}
-	}
 	return 0;
 error:
 	return -EINVAL;
@@ -1800,11 +1770,7 @@ long qcedev_ioctl(struct file *file, unsigned cmd, unsigned long arg)
 		if (is_fips_qcedev_integritytest_done)
 			return -EPERM;
 
-		if (!access_ok(VERIFY_WRITE, (void __user *)arg,
-			sizeof(enum fips_status)))
-			return -EFAULT;
-
-		if (__copy_from_user(&status, (void __user *)arg,
+		if (copy_from_user(&status, (void __user *)arg,
 			sizeof(enum fips_status)))
 			return -EFAULT;
 
@@ -1833,12 +1799,9 @@ long qcedev_ioctl(struct file *file, unsigned cmd, unsigned long arg)
 	case QCEDEV_IOCTL_QUERY_FIPS_STATUS:
 		{
 		enum fips_status status;
-		if (!access_ok(VERIFY_WRITE, (void __user *)arg,
-			sizeof(enum fips_status)))
-			return -EFAULT;
 
 		status = g_fips140_status;
-		if (__copy_to_user((void __user *)arg, &status,
+		if (copy_to_user((void __user *)arg, &status,
 			sizeof(enum fips_status)))
 			return -EFAULT;
 
