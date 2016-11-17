@@ -112,7 +112,7 @@ struct mtp_dev {
 	struct file *xfer_file;
 	loff_t xfer_file_offset;
 	int64_t xfer_file_length;
-	unsigned xfer_send_header;
+	unsigned int xfer_send_header;
 	uint16_t xfer_command;
 	uint32_t xfer_transaction_id;
 	int xfer_result;
@@ -571,8 +571,7 @@ static ssize_t mtp_read(struct file *fp, char __user *buf,
 	struct usb_composite_dev *cdev = dev->cdev;
 	struct usb_request *req;
 	ssize_t r = count;
-	unsigned xfer;
-	int len;
+	unsigned int xfer;
 	int ret = 0;
 
 	DBG(cdev, "mtp_read(%zu)\n", count);
@@ -662,7 +661,7 @@ static ssize_t mtp_write(struct file *fp, const char __user *buf,
 	struct usb_composite_dev *cdev = dev->cdev;
 	struct usb_request *req = 0;
 	ssize_t r = count;
-	unsigned xfer;
+	unsigned int xfer;
 	int sendZLP = 0;
 	int ret;
 
@@ -982,8 +981,12 @@ static int mtp_send_event(struct mtp_dev *dev, struct mtp_event *event)
 	return ret;
 }
 
+<<<<<<< HEAD
 static long mtp_send_receive_ioctl(struct file *fp, unsigned code,
 	struct mtp_file_range *mfr)
+=======
+static long mtp_ioctl(struct file *fp, unsigned int code, unsigned long value)
+>>>>>>> bf150b3... ANDROID: usb: gadget: function: Fix Coding Style
 {
 	struct mtp_dev *dev = fp->private_data;
 	struct file *filp = NULL;
@@ -1362,7 +1365,7 @@ mtp_function_unbind(struct usb_configuration *c, struct usb_function *f)
 }
 
 static int mtp_function_set_alt(struct usb_function *f,
-		unsigned intf, unsigned alt)
+		unsigned int intf, unsigned int alt)
 {
 	struct mtp_dev	*dev = func_to_mtp(f);
 	struct usb_composite_dev *cdev = f->config->cdev;
