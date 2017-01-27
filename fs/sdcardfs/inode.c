@@ -523,17 +523,6 @@ static int sdcardfs_rename(struct inode *old_dir, struct dentry *old_dentry,
 	if (new_dir != old_dir) {
 		sdcardfs_copy_and_fix_attrs(old_dir, lower_old_dir_dentry->d_inode);
 		fsstack_copy_inode_size(old_dir, lower_old_dir_dentry->d_inode);
-
-		/* update the derived permission of the old_dentry
-		 * with its new parent
-		 */
-		new_parent = dget_parent(new_dentry);
-		if(new_parent) {
-			if(old_dentry->d_inode) {
-				update_derived_permission_lock(old_dentry);
-			}
-			dput(new_parent);
-		}
 	}
 	get_derived_permission_new(new_dentry->d_parent, old_dentry, &new_dentry->d_name);
 	fixup_tmp_permissions(old_dentry->d_inode);
