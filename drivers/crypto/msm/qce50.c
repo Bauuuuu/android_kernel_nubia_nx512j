@@ -1,6 +1,6 @@
 /* Qualcomm Crypto Engine driver.
  *
- * Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -2748,24 +2748,18 @@ static void qce_sps_exit(struct qce_device *pce_dev)
 	qce_sps_release_bam(pce_dev);
 }
 
-static void print_notify_debug(struct sps_event_notify *notify)
-{
-	phys_addr_t addr = DESC_FULL_ADDR(notify->data.transfer.iovec.flags,
-					  notify->data.transfer.iovec.addr);
-	pr_debug("sps ev_id=%d, addr=0x%pa, size=0x%x, flags=0x%x user=0x%p\n",
-			notify->event_id, &addr,
-			notify->data.transfer.iovec.size,
-			notify->data.transfer.iovec.flags,
-			notify->data.transfer.user);
-}
-
 static void _aead_sps_producer_callback(struct sps_event_notify *notify)
 {
 	struct qce_device *pce_dev = (struct qce_device *)
 		((struct sps_event_notify *)notify)->user;
 
 	pce_dev->ce_sps.notify = *notify;
-	print_notify_debug(notify);
+	pr_debug("sps ev_id=%d, addr=0x%x, size=0x%x, flags=0x%x\n",
+			notify->event_id,
+			notify->data.transfer.iovec.addr,
+			notify->data.transfer.iovec.size,
+			notify->data.transfer.iovec.flags);
+
 	if (pce_dev->ce_sps.producer_state == QCE_PIPE_STATE_COMP) {
 		pce_dev->ce_sps.producer_state = QCE_PIPE_STATE_IDLE;
 		_aead_complete(pce_dev);
@@ -2793,7 +2787,12 @@ static void _sha_sps_producer_callback(struct sps_event_notify *notify)
 		((struct sps_event_notify *)notify)->user;
 
 	pce_dev->ce_sps.notify = *notify;
-	print_notify_debug(notify);
+	pr_debug("sps ev_id=%d, addr=0x%x, size=0x%x, flags=0x%x\n",
+			notify->event_id,
+			notify->data.transfer.iovec.addr,
+			notify->data.transfer.iovec.size,
+			notify->data.transfer.iovec.flags);
+	/* done */
 	_sha_complete(pce_dev);
 }
 
@@ -2803,7 +2802,12 @@ static void _f9_sps_producer_callback(struct sps_event_notify *notify)
 		((struct sps_event_notify *)notify)->user;
 
 	pce_dev->ce_sps.notify = *notify;
-	print_notify_debug(notify);
+	pr_debug("sps ev_id=%d, addr=0x%x, size=0x%x, flags=0x%x\n",
+			notify->event_id,
+			notify->data.transfer.iovec.addr,
+			notify->data.transfer.iovec.size,
+			notify->data.transfer.iovec.flags);
+	/* done */
 	_f9_complete(pce_dev);
 }
 
@@ -2813,8 +2817,32 @@ static void _f8_sps_producer_callback(struct sps_event_notify *notify)
 		((struct sps_event_notify *)notify)->user;
 
 	pce_dev->ce_sps.notify = *notify;
-	print_notify_debug(notify);
-	_f8_complete(pce_dev);
+	pr_debug("sps ev_id=%d, addr=0x%x, size=0x%x, flags=0x%x\n",
+			notify->event_id,
+			notify->data.transfer.iovec.addr,
+			notify->data.transfer.iovec.size,
+			notify->data.transfer.iovec.flags);
+
+	if (pce_dev->ce_sps.producer_state == QCE_PIPE_STATE_COMP) {
+		pce_dev->ce_sps.producer_state = QCE_PIPE_STATE_IDLE;
+		/* done */
+		_f8_complete(pce_dev);
+	} else {
+		int rc = 0;
+		pce_dev->ce_sps.producer_state = QCE_PIPE_STATE_COMP;
+		pce_dev->ce_sps.out_transfer.iovec_count = 0;
+		_qce_sps_add_data(GET_PHYS_ADDR(pce_dev->ce_sps.result_dump),
+					CRYPTO_RESULT_DUMP_SIZE,
+					  &pce_dev->ce_sps.out_transfer);
+		_qce_set_flag(&pce_dev->ce_sps.out_transfer,
+				SPS_IOVEC_FLAG_EOT|SPS_IOVEC_FLAG_INT);
+		rc = sps_transfer(pce_dev->ce_sps.producer.pipe,
+					  &pce_dev->ce_sps.out_transfer);
+		if (rc) {
+			pr_err("sps_xfr() fail (producer pipe=0x%lx) rc = %d\n",
+				(uintptr_t)pce_dev->ce_sps.producer.pipe, rc);
+		}
+	}
 }
 
 static void _ablk_cipher_sps_producer_callback(struct sps_event_notify *notify)
@@ -2823,7 +2851,12 @@ static void _ablk_cipher_sps_producer_callback(struct sps_event_notify *notify)
 		((struct sps_event_notify *)notify)->user;
 
 	pce_dev->ce_sps.notify = *notify;
-	print_notify_debug(notify);
+	pr_debug("sps ev_id=%d, addr=0x%x, size=0x%x, flags=0x%x\n",
+			notify->event_id,
+			notify->data.transfer.iovec.addr,
+			notify->data.transfer.iovec.size,
+			notify->data.transfer.iovec.flags);
+
 	if (pce_dev->ce_sps.producer_state == QCE_PIPE_STATE_COMP) {
 		pce_dev->ce_sps.producer_state = QCE_PIPE_STATE_IDLE;
 		_ablk_cipher_complete(pce_dev);
