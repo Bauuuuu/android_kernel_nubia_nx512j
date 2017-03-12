@@ -600,7 +600,7 @@ config ZTEMT_BATTERY_MONITOR
 	  ZTEMT Battery Monitor
 
 config ZTEMT_BATTERY_FG_LC709203F
-	bool " ZTEMT support feul gauge lc709203f"
+	bool "ZTEMT support feul gauge lc709203f"
 	default n
 	help
 	   Say Y here to support ZTEMT feul gauge lc709203f
