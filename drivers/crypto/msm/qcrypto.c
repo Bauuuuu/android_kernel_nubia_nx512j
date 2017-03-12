@@ -486,7 +486,6 @@ static void qcrypto_ce_set_bus(struct crypto_engine *pengine,
 		}
 		//pm_relax(&pengine->pdev->dev);
 	}
-	return;
 clk_err:
 	//pm_relax(&pengine->pdev->dev);
 	return;
