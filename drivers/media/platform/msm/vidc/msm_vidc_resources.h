@@ -94,7 +94,6 @@ struct bus_info {
 	struct msm_bus_scale_pdata *pdata;
 	u32 priv;
 	u32 sessions_supported; /* bitmask */
-	bool passive;
 };
 
 struct bus_set {
