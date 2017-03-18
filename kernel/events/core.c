@@ -3764,6 +3764,18 @@ static long _perf_ioctl(struct perf_event *event, unsigned int cmd,
 	return 0;
 }
 
+static long perf_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+{
+	struct perf_event *event = file->private_data;
+	struct perf_event_context *ctx;
+	long ret;
+
+	ctx = perf_event_ctx_lock(event);
+	ret = _perf_ioctl(event, cmd, arg);
+	perf_event_ctx_unlock(event, ctx);
+
+	return ret;
+}
 #ifdef CONFIG_COMPAT
 static long perf_compat_ioctl(struct file *file, unsigned int cmd,
 				unsigned long arg)
@@ -3782,19 +3794,6 @@ static long perf_compat_ioctl(struct file *file, unsigned int cmd,
 #else
 # define perf_compat_ioctl NULL
 #endif
-
-static long perf_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
-{
-        struct perf_event *event = file->private_data;
-        struct perf_event_context *ctx;
-        long ret;
-
-        ctx = perf_event_ctx_lock(event);
-        ret = _perf_ioctl(event, cmd, arg);
-        perf_event_ctx_unlock(event, ctx);
-
-        return ret;
-}
 
 int perf_event_task_enable(void)
 {
