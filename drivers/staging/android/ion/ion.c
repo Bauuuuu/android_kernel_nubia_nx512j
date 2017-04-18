@@ -2008,12 +2008,11 @@ debugfs_done:
 	init_rwsem(&idev->lock);
 	plist_head_init(&idev->heaps);
 	idev->clients = RB_ROOT;
-<<<<<<< HEAD
+
 	ion_dev = idev;
-=======
-	ion_root_client = &idev->clients;
+
 	mutex_init(&debugfs_mutex);
->>>>>>> e5e4ee1de3c... BACKPORT: ion:synchronize debugfs callback and ion_client_destroy
+
 	return idev;
 }
 
