@@ -296,13 +296,9 @@ CONFIG_NR_CPUS=8
 CONFIG_HOTPLUG_CPU=y
 # CONFIG_HIMA_HOTPLUG is not set
 # CONFIG_THUNDERPLUG_CONTROL is not set
-CONFIG_BRICKED_HOTPLUG=y
-<<<<<<< HEAD:arch/arm64/configs/nx512j_defconfig
 # CONFIG_INTELLI_PLUG is not set
 # CONFIG_ALUCARD_HOTPLUG is not set
 # CONFIG_BRICKED_HOTPLUG is not set
-=======
->>>>>>> parent of ff2c3567fa4... INTELLIPLUG added:arch/arm64/configs/f93-NX512J_defconfig
 # CONFIG_PREEMPT_NONE is not set
 # CONFIG_PREEMPT_VOLUNTARY is not set
 CONFIG_PREEMPT=y
