@@ -438,7 +438,7 @@
 };
 
 &clock_gcc {
-	compatible = "qcom,gcc-8936-v3";
+	compatible = "qcom,gcc-8936";
 };
 
 &gdsc_oxili_gx {
