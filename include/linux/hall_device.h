@@ -31,6 +31,7 @@
 #define MAGNETIC_DEVICE_NEAR		1
 #define MAGNETIC_DEVICE_FAR		2
 #define MAGNETIC_DEVICE_UNKNOW		-1
+#define HALL_LABEL_NAME_LEN		32
 
 struct hall_device_irq {
 	unsigned int irq_num;
@@ -51,6 +52,7 @@ struct hall_hw_device {
 	struct hall_device_chip *chip;
 	struct hall_device_irq irq;
 	struct work_struct irq_work;
+	unsigned char label_name[HALL_LABEL_NAME_LEN];
 };
 
 struct hall_device_chip {

@@ -11,10 +11,13 @@
  * CONTENT OF SUCH SOFTWARE AND/OR THE USE MADE BY CUSTOMERS OF THE CODING
  * INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
  *
- * Version: 1.3
+ * Version: 1.4
  * Revision record:
+ * 	V1.4:
+ * 		Add label name for each hall device when
+ * 		request gpio and irq. 2015/07/01
  * 	V1.3:
- * 		optimum hall deive wakelock. 2015/03/19
+ * 		optimum hall device wakelock. 2015/03/19
  * 	V1.2:
  * 		Support the old board which have only one hall device.
  * 		Release the wake lock in old board. 2015/03/17
@@ -27,7 +30,7 @@
 
 #include <linux/hall_device.h>
 
-#define HALL_DRIVER_VERSION "v1.3"
+#define HALL_DRIVER_VERSION "v1.4"
 
 #define LOG_TAG "HALL_DEVICE"
 //#define DEBUG_ON
@@ -410,16 +413,15 @@ static int hall_hw_device_init(struct hall_device_chip *chip)
 {
 	int i = 0;
 	int ret = 0;
-	unsigned char label_name[32];
 	struct hall_hw_device *hw_device;
 
 	list_for_each_entry(hw_device, &chip->hw_device_list, node) {
-		snprintf(label_name, 32, "%s%d", "hall_device_irq_pin", i);
-		ret = gpio_request(hw_device->irq.irq_pin, label_name);
+		snprintf(hw_device->label_name, HALL_LABEL_NAME_LEN, "%s%d", "hall_device_irq_pin", i);
+		ret = gpio_request(hw_device->irq.irq_pin, hw_device->label_name);
 		if (ret) {
 			SENSOR_LOG_ERROR("gpio %d is busy and then to free it\n", hw_device->irq.irq_pin);
 			gpio_free(hw_device->irq.irq_pin);
-			ret = gpio_request(hw_device->irq.irq_pin, label_name);
+			ret = gpio_request(hw_device->irq.irq_pin, hw_device->label_name);
 			if (ret) {
 				SENSOR_LOG_ERROR("Failed to request gpio %d\n", hw_device->irq.irq_pin);
 				return -1;
@@ -432,7 +434,7 @@ static int hall_hw_device_init(struct hall_device_chip *chip)
 				IRQF_TRIGGER_FALLING |
 				IRQF_TRIGGER_RISING |
 				IRQF_ONESHOT,
-				label_name, chip);
+				hw_device->label_name, chip);
 		if (ret) {
 			SENSOR_LOG_ERROR("Failed to request irq %d\n", hw_device->irq.irq_num);
 			return -1;
