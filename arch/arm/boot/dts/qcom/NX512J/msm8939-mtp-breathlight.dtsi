@@ -20,6 +20,12 @@
             pinctrl-names = "aw9106b_active","aw9106b_suspend";
 		    pinctrl-0 = <&aw9106b_ctl_active>;
 		    pinctrl-1 = <&aw9106b_ctl_suspend>;
-        };	
-	  };
+        };
+	aw2013_led@45 {
+	aw2013_led,name = "aw2013";
+	compatible = "aw2013";
+	reg = <0x45>;
+	aw2013-irq-gpio = <&msm_gpio 112 0x00>;
+	};
+	};
 };

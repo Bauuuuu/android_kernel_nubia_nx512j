@@ -40,7 +40,7 @@
 static bool AW9106B_SUSPEND_FLAG=false; 
 //#define GPIO_PWDN 28
 #define DELAY_256MS_UNIT 1
-#define DRV_NAME "class/leds/red/outn"
+#define DRV_NAME "class/leds/nubia_led/outn"
 //#define AW_GPIO_CONFIG
 
 #define AW_LED_DELAY_MS 650
@@ -161,6 +161,7 @@ static int fulloff_time= FULLOFF_4096_MS;
 static char fade_parameter[FADE_PARAM_LEN];
 
 static int outn = 0;
+static int blink_mode = 0;
 static u16 aw_running = 0;
 static int timer_running = 0;
 static int fade_outn = 0;
@@ -762,21 +763,31 @@ static enum hrtimer_restart aw9106b_timer(struct hrtimer *timer)
 	return HRTIMER_NORESTART;
 }
 
+static ssize_t show_blink_mode(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+
+	return sprintf(buf, "%d\n", blink_mode);
+}
+
 /*********************       aw9106b_breath_mode_set    *********************/
 
-void aw9106b_breath_mode_set(struct led_classdev *led_cdev,
-
-		enum led_brightness brightness)
+static ssize_t set_blink_mode(struct device *dev,
+		struct device_attribute *attr, const char *buf,size_t count)
 
 {
-	int val = brightness;
+       
 	int rc = 0;
-	if(AW9106B_SUSPEND_FLAG==true)return;
+	
+       sscanf(buf, "%d", &blink_mode);
+	AW_DBG("blink_mode= %d \n",blink_mode);
+
+	if(AW9106B_SUSPEND_FLAG==true)return count;
 
 	//gpio_tlmm_config(GPIO_CFG(GPIO_PWDN, 0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA),GPIO_CFG_ENABLE);
-	AW_DBG("val=%d fade_outn= 0x%x, outn= 0x%x \n",val,fade_outn, outn);
+	AW_DBG("val=%d fade_outn= 0x%x, outn= 0x%x \n",blink_mode,fade_outn, outn);
 
-	if (aw_running == 0 && val != AW_POWER_OFF) { 
+	if (aw_running == 0 && blink_mode != AW_POWER_OFF) { 
 		aw9106b_power_set(AW_POWER_ON);
 		rc = aw9106b_solft_reset();
 		if(rc < 0)
@@ -784,7 +795,7 @@ void aw9106b_breath_mode_set(struct led_classdev *led_cdev,
 		aw_running = 1;
 	}
 
-	switch (val) {
+	switch (blink_mode) {
 		case AW_POWER_OFF:
 			aw9106b_fade_data_init();
 			aw9106b_control_init();
@@ -794,27 +805,27 @@ void aw9106b_breath_mode_set(struct led_classdev *led_cdev,
 		case AW_CONST_ON: 
 			if((outn == 0x08)||(outn == 0x20))
 				//enable_outn_const_led(val, max_current, min_grade + 100);
-				enable_outn_const_led(val, max_current, 5*min_grade);
+				enable_outn_const_led(blink_mode, max_current, 5*min_grade);
 			else
-				enable_outn_const_led(val, max_current, min_grade);
+				enable_outn_const_led(blink_mode, max_current, min_grade);
 			break;
 
 		case AW_CONST_OFF:
-			enable_outn_const_led(val, max_current, 0);
+			enable_outn_const_led(blink_mode, max_current, 0);
 			break;
 
 			//blink breath mode
 		case AW_FADE_AUTO:
-			enable_outn_blink_led(val, max_current);
+			enable_outn_blink_led(blink_mode, max_current);
 			break;
 
 			//smart breath mode
 		case AW_FADE_ON_STEP:
-			enable_outn_fade_onoff(val, max_current,AW_FADE_ON);
+			enable_outn_fade_onoff(blink_mode, max_current,AW_FADE_ON);
 			break;
 
 		case AW_FADE_OFF_STEP:
-			enable_outn_fade_onoff(val,max_current,AW_FADE_OFF);
+			enable_outn_fade_onoff(blink_mode,max_current,AW_FADE_OFF);
 			break;
 
 			//fade 1 cycle for press home key
@@ -833,9 +844,16 @@ void aw9106b_breath_mode_set(struct led_classdev *led_cdev,
 			break;
 
 	}
+
+return count;
+
 }
 
-EXPORT_SYMBOL_GPL(aw9106b_breath_mode_set);
+
+//path: sys/class/leds/red/
+const static DEVICE_ATTR(blink_mode, S_IRUGO | S_IWUSR,
+		show_blink_mode, set_blink_mode);
+//EXPORT_SYMBOL_GPL(aw9106b_breath_mode_set);
 
 
 static void aw9106b_show_regs(void)
@@ -1018,8 +1036,8 @@ module_param_call(led_config, set_led_mode, param_get_uint,
 
 
 static struct led_classdev breath_led = {
-	.name		= "red",
-	.brightness_set	= aw9106b_breath_mode_set,
+	.name		= "nubia_led",
+	//.brightness_set	= aw9106b_breath_mode_set,
 };
 
 
@@ -1077,7 +1095,7 @@ static int aw9106b_pinctrl_init(struct aw9106b_plat_data *aw9106b_plat_data,stru
 	aw9106b_plat_data->gpio_power_supend
 		= pinctrl_lookup_state(aw9106b_plat_data->aw9106b_led_pinctrl,
 			"aw9106b_suspend");
-	printk("zqf debug: kernel*****aw9106b_pinctrl_init passed !\n");
+	//printk("zqf debug: kernel*****aw9106b_pinctrl_init passed !\n");
 	if (IS_ERR_OR_NULL(aw9106b_plat_data->gpio_power_supend)) {
 		retval = PTR_ERR(aw9106b_plat_data->gpio_power_supend);
 		aw9106b_plat_data->aw9106b_led_pinctrl = NULL;
@@ -1110,6 +1128,7 @@ static int  aw9106b_probe(struct i2c_client *client,
 
 {
 	int ret = 0;
+	char buf = 0x0;
 	
 	struct aw9106b_plat_data *pdata =
 	  (struct aw9106b_plat_data *)client->dev.platform_data;
@@ -1159,6 +1178,12 @@ static int  aw9106b_probe(struct i2c_client *client,
 		gpio_set_value_cansleep(pdata->power_ctl_gpio, 1);
 	}
 
+	ret = aw9106b_i2c_rx_byte_data(aw9106b_data.i2c_client,aw9106b_regs.aw_reset,&buf);
+	if(ret < 0) {
+	pr_err("%s: write reg[0x%x] fail!\n",__func__,aw9106b_regs.aw_reset);
+	return ret;
+	}
+
 	ret = led_classdev_register(NULL, &breath_led);
 	if (ret) {
 		pr_err("unable to register breath_led ret=%d\n",ret);
@@ -1178,6 +1203,11 @@ static int  aw9106b_probe(struct i2c_client *client,
 	ret = device_create_file(breath_led.dev, &dev_attr_outn);
 	if (unlikely(ret < 0)) {
 		dev_err(breath_led.dev, "failed: cannot create outn.\n");
+	}
+		
+	ret = device_create_file(breath_led.dev, &dev_attr_blink_mode);
+	if (unlikely(ret < 0)) {
+		dev_err(breath_led.dev, "failed: cannot create blink_mode.\n");
 	}
 
 	INIT_WORK(&aw9106b_data.work, aw9106b_work_func);
