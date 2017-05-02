@@ -67,12 +67,11 @@
 		compatible = "zte,hall_device";
 		status = "okay";
 		pinctrl-names = "hall_default","hall_sleep";
-		pinctrl-0 = <&hall_int_0_default &hall_int_1_default>;
-		pinctrl-1 = <&hall_int_0_sleep &hall_int_1_sleep>;
+		pinctrl-0 = <&hall_int_0_default>;
+		pinctrl-1 = <&hall_int_0_sleep>;
 		vio-supply = <&pm8916_l5>;
 		interrupt-parent = <&msm_gpio>;
-		hall_device,hw_device_count = <2>;
+		hall_device,hw_device_count = <1>;
 		hall_device,irq-gpio-0 = <&msm_gpio 49 0x2002>;
-		hall_device,irq-gpio-1 = <&msm_gpio 112 0x2002>;
 	};
 };

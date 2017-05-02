@@ -29,7 +29,7 @@
 #include <linux/list.h>
 
 #define MAGNETIC_DEVICE_NEAR		1
-#define MAGNETIC_DEVICE_FAR		2
+#define MAGNETIC_DEVICE_FAR		0
 #define MAGNETIC_DEVICE_UNKNOW		-1
 #define HALL_LABEL_NAME_LEN		32
 

@@ -118,6 +118,7 @@ static void hall_device_get_value_and_report(struct hall_device_chip *chip)
 		SENSOR_LOG_INFO("MAGNETIC_DEVICE gpio %d [%s]\n", hw_device->irq.irq_pin,
 				hw_device->state == MAGNETIC_DEVICE_NEAR ? "NEAR" : "FAR");
 		input_report_rel(chip->idev, hw_device->code, hw_device->state);
+		input_report_switch(chip->idev, SW_LID, hw_device->state);
 	}
 	input_sync(chip->idev);
 };
@@ -516,6 +517,9 @@ static int hall_device_probe(struct platform_device *pdev)
 	chip->idev->id.bustype = BUS_VIRTUAL;
 
 	set_bit(EV_REL,	chip->idev->evbit);
+	set_bit(EV_SW,	chip->idev->evbit);
+	input_set_capability(chip->idev, EV_SW, SW_LID);
+
 	for (i = 0; i < chip->hall_hw_device_count; i++)
 		set_bit(hall_code[i], chip->idev->relbit);
 
