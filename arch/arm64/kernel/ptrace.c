@@ -36,7 +36,6 @@
 #include <linux/regset.h>
 #include <linux/tracehook.h>
 #include <linux/elf.h>
-
 #include <asm/compat.h>
 #include <asm/debug-monitors.h>
 #include <asm/pgtable.h>
@@ -1170,7 +1169,7 @@ asmlinkage int syscall_trace_enter(struct pt_regs *regs)
 	if (secure_computing(regs->syscallno) == -1)
 		return RET_SKIP_SYSCALL_TRACE;
 
-	if (test_thread_flag_realxed(TIF_SYSCALL_TRACE))
+	if (test_thread_flag_relaxed(TIF_SYSCALL_TRACE))
 		tracehook_report_syscall(regs, PTRACE_SYSCALL_ENTER);
 
 	if (test_thread_flag_relaxed(TIF_SYSCALL_TRACEPOINT))
