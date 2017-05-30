@@ -244,8 +244,8 @@ void fixup_lower_ownership(struct dentry *dentry, const char *name)
 		if (!error)
 			error = notify_change2(path.mnt, path.dentry, &newattrs);
 		mutex_unlock(&inode->i_mutex);
-		if (error)
-			pr_err("sdcardfs: Failed to touch up lower fs gid/uid.\n");
+/*		if (error)
+			pr_err("sdcardfs: Failed to touch up lower fs gid/uid.\n");*/
 	}
 	sdcardfs_put_lower_path(dentry, &path);
 }
