@@ -40,7 +40,7 @@ dtb-$(CONFIG_ARCH_MSM8909) += msm8909-sim.dtb \
 	msm8909-1gb-cdp.dtb \
 	msm8909-1gb-mtp.dtb
 ifeq ($(CONFIG_MACH_NUBIA_MSM8939),y)
-dtb-$(CONFIG_ARCH_MSM8916) += msm8939-mtp-NX512J.dtb
+dtb-$(CONFIG_ARCH_MSM8916) += msm8939-NX512J.dtb
 else	
 dtb-$(CONFIG_ARCH_MSM8916) += msm8916-sim.dtb \
 	msm8916-rumi.dtb \
