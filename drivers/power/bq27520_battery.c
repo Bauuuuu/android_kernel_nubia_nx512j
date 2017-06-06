@@ -38,12 +38,27 @@
 
 #include "linux/power/bq24296m_charger.h"
 
+#include "ztemt_qpnp_spmi.h"
+
 #define BQ27520_UPDATER
 
 #ifdef BQ27520_UPDATER
 #include "bqfs_cmd_type.h"
+
+#if defined(CONFIG_ZTEMT_NX513_CHARGE)
+#include "bq27520_bqfs_image_nx513.h"
+#elif  defined(CONFIG_ZTEMT_NX512_BATTERY)
 #include "bq27520_bqfs_image.h"
+#include "bq27520_bqfs_image_nx512_atl.h"
+#else
+#include "bq27520_bqfs_image.h"
+#include "bq27520_bqfs_image_nx511_atl.h"
+#endif
+
 #endif 
+
+//NUBIA_BATT
+#include "nubia_fuelgauge_cntl.h"
 
 #define BQ27520_NAME		"bq27520_battery"
 
@@ -129,6 +144,12 @@
 #define CUST_MODE_LEN		48
 
 #define START_MONITOR_MS	3000
+
+#define BQFG_SHUTDOWN_VALID_LIMIT  15
+#define BQFG_DEFAULT_SOC    100
+#define BQ_DEFAULT_TEMP		250
+#define BQ_BATT_MIN_TEMP   -300
+
 //uart debug
 #define ZTEMT_UART_DEBUG_ENABLE
 
@@ -149,16 +170,15 @@ enum bq_batt_func {
 	BQ_PROP_CHG_ENABLE,
 };
 
-enum bq_resume_status {
-	BQ_RESUME_IDLE_STAT = 0,
-	BQ_RESUME_WAKE_STAT,
-	BQ_RESUME_PROP_STAT,
+enum battery_type_id {
+	BATT_ID_SDI = 470,  //Samsung
+	BATT_ID_ATL = 15,   //ATL
+	BATT_ID_UNKOWN = 0,
 };
 
 struct bq27520_chip {
 	struct device		  *dev;
 	struct i2c_client     *i2c;
-	struct delayed_work	   batt_worker;
 	struct work_struct     soc_work;
 	struct power_supply	  *batt_psy;
 	struct power_supply	  *usb_psy;
@@ -171,6 +191,9 @@ struct bq27520_chip {
 	struct pinctrl_state   *gpio_state_suspend;
 	struct qpnp_vadc_chip  *vadc_dev;
 	struct wake_lock soc_wlock;
+	char *bqfs_version;
+	const bqfs_cmd_t *bqfs_image;
+	int bqfs_image_size;
 	unsigned long suspend_at_tm;
 	unsigned long sleep_secs;
 	int low_vol_thrhld;
@@ -178,15 +201,25 @@ struct bq27520_chip {
 	int soc_int_gpio;
 	int soc_irq;
 	int low_irq;
-	int usbin_in_suspend;
-	int resume_status;
 	int batt_soc;
+	int vbatt_mv;
+	int shutdown_soc;
+	int shutdown_vbatt;
 	int batt_status;
 	int batt_health;
+	int batt_id;
+	char *battery_type;
 	bool batt_por;
 	bool is_sleep;
-
 	int batt_temp;
+
+    //NUBIA_BATT
+	struct nubia_fg_cntl *batt_cntl;
+	int batt_flags;
+	int rm_mah;
+	int full_mah;
+	int qmax_mah;
+	int cntl_status;
 };
 
 static struct bq27520_chip   *bqfg_chip = NULL;
@@ -210,7 +243,9 @@ enum power_supply_property bq27520_batt_props[] = {
 static int bq27520_update_bqfs(struct bq27520_chip *chip);
 static int bq27520_unseal(struct bq27520_chip *chip);
 static bool bq27520_check_rom_mode(struct bq27520_chip *chip);
-static int bq27520_is_resume_soc_invalid(struct bq27520_chip *chip, int batt_soc);
+extern int qpnp_backup_ocv_soc(int soc, int ocv_mv);
+extern int qpnp_read_shutdown_ocv_soc(int *soc, int *ocv_mv);
+extern bool pm_battery_present(void);
 
 static DEFINE_MUTEX(battery_mutex);
 
@@ -763,40 +798,84 @@ static struct notifier_block maxin_notifier = {
 
 //------------------------------------------------------------------------
 
-static bool bq_is_charger_present(struct bq27520_chip *chip)
+static int bq_read_battery_id(struct bq27520_chip *chip)
 {
-	union power_supply_propval ret = {0,};
+	int rc;
+	struct qpnp_vadc_result result;
+	int rpull_up_kohm, vadc_vdd_uv;
 
-	if (chip->usb_psy == NULL)
-		chip->usb_psy = power_supply_get_by_name("usb");
-	
-	if (chip->usb_psy) {
-		chip->usb_psy->get_property(chip->usb_psy,
-					POWER_SUPPLY_PROP_PRESENT, &ret);
-		return ret.intval;
+	//set default battery type
+	chip->battery_type = "ATL";
+
+	rc = qpnp_vadc_read(chip->vadc_dev, LR_MUX2_BAT_ID, &result);
+	if (rc) {
+		pr_err("error reading batt id channel = %d, rc = %d\n",
+					LR_MUX2_BAT_ID, rc);
+		return rc;
 	}
 
-	return false;
+	rc = of_property_read_u32(chip->dev_node, "rpull-up-kohm", &rpull_up_kohm);
+	if (rc) {
+		pr_err( "Unable to parse 'rpull-up-kohm'\n");
+		return rc;
+	}
+
+	rc = of_property_read_u32(chip->dev_node, "vref-batt-therm", &vadc_vdd_uv);
+	if (rc) {
+		pr_err( "Unable to parse 'vref-batt-therm'\n");
+		return rc;
+	}
+    if(vadc_vdd_uv != result.physical)
+    	chip->batt_id = (rpull_up_kohm * result.physical)/(vadc_vdd_uv - result.physical);
+	else
+		pr_err( "battery id is missing!\n");
+
+    if(abs(chip->batt_id - BATT_ID_SDI) < 50)
+		chip->battery_type = "Samsung";
+    else if(abs(chip->batt_id - BATT_ID_ATL) < 15)	
+		chip->battery_type = "ATL";
+	else
+		chip->battery_type = "Unkown";
+	
+	return chip->batt_id;
 }
 
-#define BQ_DEFAULT_TEMP		250
-static int bq_get_chg_batt_propery(struct bq27520_chip *chip,
-                                              enum power_supply_property psp_val)
+static int bq_get_pimc_batt_temp(struct bq27520_chip *chip)
 {
-	union power_supply_propval ret = {0,};
+	int rc = 0;
+	struct qpnp_vadc_result results;
 
-	if (chip->batt_psy == NULL)
-		chip->batt_psy = power_supply_get_by_name("battery");
-	
-	if (chip->batt_psy){
-		chip->batt_psy->get_property(chip->batt_psy, psp_val, &ret);
-		return ret.intval;
+	if (!pm_battery_present()){
+		pr_err("battery is not present!\n");
+		return BQ_DEFAULT_TEMP;
 	}
+	
+	rc = qpnp_vadc_read(chip->vadc_dev, LR_MUX1_BATT_THERM, &results);
+	if (rc) {
+		pr_debug("Unable to read batt temperature rc=%d\n", rc);
+		return BQ_DEFAULT_TEMP;
+	}
+	
+	pr_debug("get_bat_temp %d, %lld\n", results.adc_code, results.physical);
 
-	if(psp_val == POWER_SUPPLY_PROP_TEMP)
+	if(results.physical <= BQ_BATT_MIN_TEMP)
 		return BQ_DEFAULT_TEMP;
 
-	return -EINVAL;
+	return (int)results.physical;
+}
+
+static int bq_get_pmic_batt_voltage(struct bq27520_chip *chip)
+{
+	int rc = 0;
+	struct qpnp_vadc_result results;
+
+	rc = qpnp_vadc_read(chip->vadc_dev, VBAT_SNS, &results);
+	if (rc) {
+		pr_err("Unable to read vbat rc=%d\n", rc);
+		return 0;
+	}
+
+	return results.physical/1000;
 }
 
 int bq27520_get_batt_voltage(void)
@@ -818,7 +897,6 @@ int bq27520_get_batt_voltage(void)
 	return value;
 }
 
-#define DEFAULT_TEMP		250
 int bq27520_get_batt_temp(void)
 {
     int ret;
@@ -826,13 +904,13 @@ int bq27520_get_batt_temp(void)
 
 	if (!bqfg_chip) {
 		pr_err("called before init\n");
-		return DEFAULT_TEMP;
+		return BQ_DEFAULT_TEMP;
 	}
 
     ret = bq27520_i2c_read_word(bqfg_chip, BQ27520_REG_TEMP, &value);
 	if (ret<0) {
 		pr_err("fail to read batt temp\n");
-		return DEFAULT_TEMP;
+		return BQ_DEFAULT_TEMP;
 	}
 
 	value = value - 2730;
@@ -868,16 +946,13 @@ int bq27520_get_batt_soc(int *battery_soc)
 
 	if (!bqfg_chip) {
 		pr_err("called before init\n");
-		return 1;
+		return -1;
 	}
-	
+
     ret = bq27520_i2c_read_word(bqfg_chip,BQ27520_REG_SOC,&value);
 	if (ret<0) {
 		pr_err("fail to read batt soc\n");
-		if(bqfg_chip->batt_soc > 0)
-			*battery_soc = bqfg_chip->batt_soc;
-		else
-		    *battery_soc = DEFAULT_SOC;
+		*battery_soc = BQFG_DEFAULT_SOC;
 		return ret;
 	}
 
@@ -885,33 +960,26 @@ int bq27520_get_batt_soc(int *battery_soc)
 	return ret;
 }
 
-int bq27520_report_batt_capacity(void)
+int bq27520_get_ibatt_now(void)
 {
-	int resume_soc_invalid = 0;
-	int batt_soc;
-	int ret;
+    int ret;
+	u16 value = 0;
 
 	if (!bqfg_chip) {
 		pr_err("called before init\n");
 		return 1;
 	}
 
-	if(bqfg_chip->resume_status == BQ_RESUME_WAKE_STAT){
-		ret = bq27520_get_batt_soc(&batt_soc);
-		if( ret < 0 || bq27520_is_resume_soc_invalid(bqfg_chip, batt_soc) )
-			resume_soc_invalid = 1;
-
-		if( !resume_soc_invalid )
-			bqfg_chip->batt_soc = batt_soc;
-
-		bqfg_chip->resume_status = BQ_RESUME_PROP_STAT;
+	ret = bq27520_i2c_read_word(bqfg_chip, BQ27520_REG_INSTC, &value);
+	if (ret<0) {
+		pr_err("fail to get batt current\n");
+		return 0;
 	}
-
-	FGLOG_DEBUG("report soc=%d\n",bqfg_chip->batt_soc);
-	return bqfg_chip->batt_soc;
+	
+	return (s16)(value*(-1));
 }
 
-int bq27520_get_ibatt_now(void)
+int bq27520_get_ibatt_avg(void)
 {
     int ret;
 	u16 value = 0;
@@ -1021,14 +1089,15 @@ static int bq27520_get_batt_property(struct power_supply *psy,
 		break;
 		
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
-	case POWER_SUPPLY_PROP_CURRENT_AVG:
 		val->intval = bq27520_get_ibatt_now() * 1000;
+		break;
+		
+	case POWER_SUPPLY_PROP_CURRENT_AVG:
+		val->intval = bq27520_get_ibatt_avg() * 1000;
 		break;
 
 	case POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN:
-		ret = bq27520_i2c_read_word(chip, BQ27520_REG_DESCAP, &value);
-		if (likely(ret >= 0)) 
-				val->intval = (int)value;
+		val->intval = chip->qmax_mah;
 		break;
 
 	case POWER_SUPPLY_PROP_CHARGE_FULL:
@@ -1050,7 +1119,8 @@ static int bq27520_get_batt_property(struct power_supply *psy,
 		break;
 
 	case POWER_SUPPLY_PROP_CAPACITY:
-		val->intval = bq27520_report_batt_capacity();
+		//NUBIA_BATT
+	    val->intval = nubia_report_batt_capacity(chip->batt_cntl);
 		break;
 
 	case POWER_SUPPLY_PROP_TIME_TO_EMPTY_NOW:
@@ -1075,19 +1145,6 @@ bq27520_set_batt_property(struct power_supply *psy,
 
 	pr_debug("%s psp=%d intval=%d\n",__func__,psp,val->intval);
 	return rc;
-}
-
-int bq27520_set_power_supply(struct power_supply *batt_psy)
-{
-    if(!batt_psy)
-		return -EINVAL;
-		
-    batt_psy->properties = bq27520_batt_props;
-    batt_psy->num_properties = ARRAY_SIZE(bq27520_batt_props);
-	batt_psy->get_property = bq27520_get_batt_property;
-	batt_psy->set_property = bq27520_set_batt_property;
-
-	return 0;
 }
 
 void update_power_supply(struct bq27520_chip *chip)
@@ -1116,144 +1173,6 @@ static void bq27520_dump_regs(struct bq27520_chip *chip)
         printk("reg[0x%x]%4x \n",i,val);
 	}
 
-}
-
-#define BATT_LOW_MONITOR_MS	10000
-#define BATT_NORMAL_MONITOR_MS	20000
-#define BATT_SLOW_MONITOR_MS	60000
-static int bq27520_get_delay_time(int battery_soc)
-{
-    if(battery_soc > 90)
-		return BATT_SLOW_MONITOR_MS;
-    else if(battery_soc > 20)
-		return BATT_NORMAL_MONITOR_MS;
-	else 
-		return BATT_LOW_MONITOR_MS;
-}
-
-static void bq27520_batt_worker(struct work_struct *work)
-{
-	struct delayed_work *dwork = to_delayed_work(work);
-	struct bq27520_chip *chip = container_of(dwork,struct bq27520_chip,batt_worker);
-	int power_supply_change = 0;
-    int batt_soc,battery_temp,batt_ma,batt_mv;
-	int last_batt_soc,fg_batt_soc;
-	int new_batt_health;
-	int usb_in;
-	int batt_status;
-	int rc;
-    int batt_flags, cntl_status, rm_mah, full_mah, qmax_mah;
-	static int err_cnt = 0;
-	static int batt_low_count = 0;
-	
-	battery_temp = bq_get_chg_batt_propery(chip, POWER_SUPPLY_PROP_TEMP);
-	chip->batt_temp = clamp(battery_temp, chip->batt_temp-50, chip->batt_temp+50);
-	rc = bq27520_set_batt_temp(chip,chip->batt_temp);
-	if(rc<0)
-		pr_err("fail to write batt temp\n");
-
-	bq27520_get_batt_soc(&batt_soc);
-	fg_batt_soc = batt_soc;
-	batt_ma = bq27520_get_ibatt_now();
-	batt_mv = bq27520_get_batt_voltage();
-	usb_in =  bq_is_charger_present(chip);
-	batt_status = bq_get_chg_batt_propery(chip, POWER_SUPPLY_PROP_STATUS);
-
-	batt_flags = bq27520_get_batt_flags(chip);
-	cntl_status = bq27520_get_cntl_status(chip);
-	rm_mah = bq27520_get_rm_mah(chip);
-	full_mah = bq27520_get_full_mah(chip);
-	qmax_mah = bq27520_get_qmax_mah(chip);
-
-    //check if the fuel gauge is in err status
-    if(batt_mv > 8000){
-   		if(err_cnt < 3)
-			err_cnt++;
-		else{
-			err_cnt = 0;
-			bq27520_reset_fuel_gauge(chip);
-			FGLOG_INFO("batt vol is error,batt_mv=%d,reset the fuel gauge!\n",batt_mv);
-		}
-    }else
-       err_cnt = 0;
-	
-	last_batt_soc = chip->batt_soc;
-	
-	//after charging full for a long time, soc < 100 and charger is online, so set soc to 100%
-	if( usb_in && last_batt_soc==100 && (batt_soc==99 || batt_soc==98) ){	
-		if( batt_ma < 10 ){
-			batt_soc = 100;
-			FGLOG_INFO("set soc to 100\n");
-		}
-	}
-
-	//after charging done and stop charging,but  soc < 100 and charger is online, so set soc  to 100%
-	if( batt_status == POWER_SUPPLY_STATUS_FULL
-	    && batt_ma<=10
-	    && (batt_soc>=95 && batt_soc<100)){
-        batt_soc = 100;
-		FGLOG_INFO("chg done set soc to 100\n");
-	}
-
-    //avoid the power off voltage is too high
-	if(last_batt_soc != 0 && batt_soc == 0 && !usb_in){
-		if(batt_mv > 3400 && batt_mv < 4500){
-			batt_soc = 1;
-			batt_low_count = 0;
-			pr_info("batt_vol is above 3400,set soc =1 \n");
-		}else if(batt_mv > 3200 && batt_mv < 4500 && batt_low_count < 2){
-			batt_low_count ++;
-			batt_soc = 1;
-			pr_info("batt_vol is above 3200,set soc =1 for %d times\n",batt_low_count);
-		}
-	}else
-		batt_low_count = 0;
-
-	if(last_batt_soc >= 0){
-		if(chip->resume_status){
-			if(chip->resume_status == BQ_RESUME_WAKE_STAT
-				  && !bq27520_is_resume_soc_invalid(chip, batt_soc))
-				last_batt_soc = batt_soc;
-			power_supply_change = 1;
-			chip->resume_status = BQ_RESUME_IDLE_STAT;
-	    }else if( last_batt_soc < batt_soc && batt_ma<=0 ) // batt_ma < 0,means it is charging
-			last_batt_soc++;
-		else if( last_batt_soc > batt_soc && batt_ma>0 ) // batt_ma > 0,means it is discharging
-			last_batt_soc--;
-	}else
-	    last_batt_soc = batt_soc;
-
-	if(chip->batt_soc != last_batt_soc){
-		chip->batt_soc = bound_soc(last_batt_soc);
-		power_supply_change = 1;
-	}
-
-	if(chip->batt_status != batt_status){
-		chip->batt_status = batt_status;
-		power_supply_change = 1;
-	}
-
-	new_batt_health = bq_get_chg_batt_propery(chip, POWER_SUPPLY_PROP_HEALTH);
-	if(chip->batt_health != new_batt_health){
-		chip->batt_health = new_batt_health;
-		power_supply_change = 1;
-	}
-
-	if((batt_mv > chip->low_vol_thrhld+20 || usb_in) && wake_lock_active(&chip->soc_wlock))
-		wake_unlock(&chip->soc_wlock);
-
-	if(power_supply_change)
-		update_power_supply(chip);
-
-	FGLOG_INFO("bsoc=%d T=%d mA=%d mV=%d U=%d [0x%x 0x%x %d %d %d %d]\n",
-		chip->batt_soc,chip->batt_temp,batt_ma,batt_mv,usb_in,batt_flags,cntl_status,
-		fg_batt_soc,rm_mah,full_mah,qmax_mah);
-
-	if (bqfg_log_level > FG_DEBUG)
-		bq27520_dump_regs(chip);
-
-	schedule_delayed_work(&chip->batt_worker,
-			  round_jiffies_relative(msecs_to_jiffies(bq27520_get_delay_time(chip->batt_soc))));
 }
 
 #if 1
@@ -1357,7 +1276,8 @@ static void bq27520_soc_worker(struct work_struct *work)
 	
 	batt_flags = bq27520_get_batt_flags(chip);
 	batt_mv = bq27520_get_batt_voltage();
-	bq27520_get_batt_soc(&batt_soc);
+	if( bq27520_get_batt_soc(&batt_soc) < 0 );
+		batt_soc = nubia_report_batt_capacity(chip->batt_cntl); //NUBIA_BATT
 	
 	if(!wake_lock_active(&chip->soc_wlock) && (batt_soc == 0 || batt_mv < chip->low_vol_thrhld))
     	wake_lock(&chip->soc_wlock);
@@ -1500,13 +1420,6 @@ static void bq27520_create_debugfs_entries(struct bq27520_chip *chip)
 	return;
 }
 
-static void bq27520_init_defaults(struct bq27520_chip *chip)
-{
-	chip->batt_soc = -EINVAL;
-	chip->batt_status = POWER_SUPPLY_STATUS_UNKNOWN;
-	chip->batt_health = POWER_SUPPLY_HEALTH_UNKNOWN;
-}
-
 #ifdef BQ27520_UPDATER 
 /* the following routines are for bqfs/dffs update purpose, can be removed if not used*/
 static int bq27520_check_seal_state(struct bq27520_chip *chip)
@@ -1615,12 +1528,14 @@ static bool bq27520_check_update_necessary(struct bq27520_chip *chip)
         return false;
     }
 	
-	pr_info("get bqfs version = %s\n",buf);
+	pr_info("get now bqfs_version = %s\n",buf);
 	
-    if(strncmp(buf, BQFS_VERSION, BQ27520_DEVICE_NAME_LENGTH) == 0) 
+    if(strncmp(buf, chip->bqfs_version, BQ27520_DEVICE_NAME_LENGTH) == 0) {
         return false;
-    else    
+    } else{    
+  		pr_info("need update to new bqfs_version = %s\n",chip->bqfs_version);
         return true;
+    }
 }
 
 static bool bq27520_mark_as_updated(struct bq27520_chip *chip)
@@ -1630,7 +1545,7 @@ static bool bq27520_mark_as_updated(struct bq27520_chip *chip)
     ret = bq27520_write_df(chip,
 		                   BQ27520_DEVICE_NAME_CLASSID,
 		                   BQ27520_DEVICE_NAME_OFFSET, 
-		                   BQFS_VERSION, 
+		                   chip->bqfs_version, 
 		                   BQ27520_DEVICE_NAME_LENGTH);
     if(ret < 0) 
         return false;
@@ -1687,11 +1602,41 @@ static bool bq27520_update_execute_cmd(struct bq27520_chip *chip, const bqfs_cmd
 static int bq27520_update_bqfs(struct bq27520_chip *chip)
 {
     struct i2c_client *client = to_i2c_client(chip->dev);
+	int battery_id;
     u16 i;
 	int ret;
 
-	pr_info("start check update\n");
+	battery_id = bq_read_battery_id(chip);
+	pr_info("start check update, battery_id=%d kohm, batt_type=%s\n",battery_id,chip->battery_type);
 
+    #if defined(CONFIG_ZTEMT_NX513_CHARGE)
+	chip->bqfs_version = BQFS_VERSION_NX513;
+	chip->bqfs_image = bqfs_image_2130mah;
+	chip->bqfs_image_size = ARRAY_SIZE(bqfs_image_2130mah);
+	#elif  defined(CONFIG_ZTEMT_NX512_BATTERY)
+	if(!strcmp(chip->battery_type, "ATL")){
+		chip->bqfs_version = BQFS_VERSION_NX512_ATL;
+		chip->bqfs_image = bqfs_image_nx512_atl;
+		chip->bqfs_image_size = ARRAY_SIZE(bqfs_image_nx512_atl);
+	}else{
+		chip->bqfs_version = BQFS_VERSION_SAM;
+		chip->bqfs_image = bqfs_image_samsung;
+		chip->bqfs_image_size = ARRAY_SIZE(bqfs_image_samsung);
+	}
+	#else
+	if(!strcmp(chip->battery_type, "ATL")){
+		chip->bqfs_version = BQFS_VERSION_NX511_ATL;
+		chip->bqfs_image = bqfs_image_nx511_atl;
+		chip->bqfs_image_size = ARRAY_SIZE(bqfs_image_nx511_atl);
+	}else{
+		chip->bqfs_version = BQFS_VERSION_SAM;
+		chip->bqfs_image = bqfs_image_samsung;
+		chip->bqfs_image_size = ARRAY_SIZE(bqfs_image_samsung);
+	}
+    #endif
+
+	pr_info("load bqfs_version=%s\n",chip->bqfs_version);
+	
     if(bq27520_check_rom_mode(chip)) 
 		goto update;// already in rom mode
 	
@@ -1717,11 +1662,11 @@ static int bq27520_update_bqfs(struct bq27520_chip *chip)
 update:    
     client->addr = BQGAUGE_I2C_ROM_ADDR;
     dev_info(chip->dev,"BQFS Updating");
-    for(i = 0; i < ARRAY_SIZE(bqfs_image); i++){
+    for(i = 0; i < chip->bqfs_image_size; i++){
         dev_dbg(chip->dev,". i=%d",i);
-        if(!bq27520_update_execute_cmd(chip,&bqfs_image[i])){
+        if(!bq27520_update_execute_cmd(chip,&chip->bqfs_image[i])){
             dev_err(chip->dev,"%s: Failed at command=%d addr=0x%x reg=0x%x\n",__func__,
-				    i,bqfs_image[i].addr,bqfs_image[i].reg);
+				    i,chip->bqfs_image[i].addr,chip->bqfs_image[i].reg);
             return -EINVAL;
         }
     }
@@ -1736,6 +1681,161 @@ update:
     return 0;
 }
 #endif
+
+static ssize_t bq27520_show_batt_type(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct power_supply	 *bq27520_psy = dev_get_drvdata(dev);
+	struct bq27520_chip *chip = container_of(bq27520_psy, struct bq27520_chip, bq27520_batt_psy);
+
+	return sprintf(buf, "%s\n", chip->battery_type);
+}
+
+const static DEVICE_ATTR(batt_type, S_IRUGO , bq27520_show_batt_type, NULL);
+
+//NUBIA_BATT
+static int bq27520_nubia_get_initial_soc(struct bq27520_chip *chip)
+{
+	int ret;
+	int batt_temp,batt_mv,batt_soc,initial_soc;
+	
+	batt_mv = bq_get_pmic_batt_voltage(chip);
+	batt_temp = bq_get_pimc_batt_temp(chip);
+	
+	if( bq27520_set_batt_temp(chip,batt_temp) < 0 ){
+		pr_err("fail to write batt temp\n");
+		goto INIT_FAIL;
+	}
+	
+	if( bq27520_get_batt_soc(&batt_soc) < 0 ){
+		pr_err("fail to get batt soc\n");
+		goto INIT_FAIL;
+	}
+
+	ret = qpnp_read_shutdown_ocv_soc(&chip->shutdown_soc, &chip->shutdown_vbatt);
+	if(!ret){
+		if( abs(batt_soc - chip->shutdown_soc) > BQFG_SHUTDOWN_VALID_LIMIT )
+			initial_soc = batt_soc;
+		else
+			initial_soc = chip->shutdown_soc;
+	}else{
+		pr_err("read shutdown batt param failed rc = %d\n", ret);
+		initial_soc = batt_soc;
+	}
+	
+	pr_info("shdn_soc=%d shdn_vbatt=%d pon_soc=%d pon_mv=%d batt_temp=%d\n", 
+		chip->shutdown_soc,chip->shutdown_vbatt,batt_soc,batt_mv,batt_temp);
+	return initial_soc;
+
+INIT_FAIL:
+	return BQFG_DEFAULT_SOC;
+	
+}
+
+static int bq27520_nubia_get_fg_soc(struct nubia_fg_cntl *batt_cntl, int *batt_soc)
+{
+	struct bq27520_chip *chip = (struct bq27520_chip *)batt_cntl->fg_pri_data;
+	int batt_temp;
+	int rc;
+	
+	batt_temp = bq_get_pimc_batt_temp(chip);
+	if( bq27520_set_batt_temp(chip, batt_temp) < 0)
+		pr_err("fail to write batt temp\n");
+
+	rc = bq27520_get_batt_soc(batt_soc);
+	if(rc < 0){
+		pr_err("fail to write batt temp\n");
+		return rc;
+	}
+
+	return  0;
+}
+
+static int bq27520_nubia_backup_soc(struct nubia_fg_cntl *batt_cntl)
+{
+	struct nubia_fg_params *batt_param = &batt_cntl->batt_data;
+	int rc;
+	
+	rc = qpnp_backup_ocv_soc(batt_param->batt_soc, batt_param->batt_mv);
+	if(rc){
+		pr_err("fail to backup batt soc and vbatt\n");
+		return rc;
+	}
+
+	return  0;
+}
+
+static int bq27520_nubia_update_data(struct nubia_fg_cntl *batt_cntl)
+{
+	struct bq27520_chip *chip = (struct bq27520_chip *)batt_cntl->fg_pri_data;
+	
+	chip->batt_flags = bq27520_get_batt_flags(chip);
+	chip->cntl_status = bq27520_get_cntl_status(chip);
+	chip->rm_mah = bq27520_get_rm_mah(chip);
+	chip->full_mah = bq27520_get_full_mah(chip);
+	chip->qmax_mah = bq27520_get_qmax_mah(chip);
+
+	return 0;
+}
+
+static int bq27520_print_info(struct nubia_fg_cntl *batt_cntl)
+{
+	struct nubia_fg_params *pbatt = &batt_cntl->batt_data;
+	struct bq27520_chip *chip = (struct bq27520_chip *)batt_cntl->fg_pri_data;
+
+	pr_info("bsoc=%d T=%d mA=%d mV=%d U=%d St=%d [0x%x 0x%x %d %d %d %d]\n",
+		pbatt->batt_soc,pbatt->batt_temp,pbatt->batt_ma,pbatt->batt_mv,pbatt->usb_in,pbatt->batt_status,
+		chip->batt_flags,chip->cntl_status,pbatt->fg_soc,chip->rm_mah,chip->full_mah,chip->qmax_mah);
+	
+	if (bqfg_log_level > FG_DEBUG)
+		bq27520_dump_regs(chip);
+
+	return 0;
+}
+
+static int bq27520_nubia_batt_init(struct bq27520_chip *chip)
+{
+	struct nubia_fg_cntl *batt_cntl;
+	int rc;
+
+	batt_cntl = kzalloc(sizeof(*batt_cntl), GFP_KERNEL);
+	if (!batt_cntl) {
+		pr_err("Couldn't allocate memory\n");
+		return -ENOMEM;
+	}
+
+	chip->batt_cntl = batt_cntl;
+
+	//--Part start. These 6 datas must be inited.
+	/**  fg_pri_data  **/
+	batt_cntl->fg_pri_data = chip;
+	/**  nubia_update_fg_data  **/
+	batt_cntl->nubia_update_fg_data = bq27520_nubia_update_data;
+	/**  nubia_print_info  **/
+	batt_cntl->nubia_print_info = bq27520_print_info;
+	/**  nubia_get_soc  **/
+	batt_cntl->nubia_get_soc = bq27520_nubia_get_fg_soc;
+	/**  soc_wlock  **/
+	batt_cntl->soc_wlock = &chip->soc_wlock;
+	/**  low_vol_thrhld  **/
+	batt_cntl->low_vol_thrhld = chip->low_vol_thrhld;
+	/**  init  batt_soc  **/
+	batt_cntl->batt_data.batt_soc = bq27520_nubia_get_initial_soc(chip);
+    //--Part end. 
+
+	batt_cntl->support_backup = 1;
+	if(batt_cntl->support_backup)
+		batt_cntl->nubia_backup_soc = bq27520_nubia_backup_soc;
+		
+    rc = nubia_batt_cntl_init(batt_cntl);
+	if (rc) {
+		pr_err("Couldn't nubia_chg_cntl_init\n");
+		return -EINVAL;
+	}
+
+    return 0;
+}
+//NUBIA_BATT end
 
 static int  bq27520_battery_probe(struct i2c_client *client,
 		const struct i2c_device_id *dev_id)
@@ -1758,8 +1858,6 @@ static int  bq27520_battery_probe(struct i2c_client *client,
 	chip->batt_temp = BQ_DEFAULT_TEMP;
 	i2c_set_clientdata(client, chip);
 
-	bq27520_init_defaults(chip);
-
 	chip->vadc_dev = qpnp_get_vadc(&chip->i2c->dev, "bq27520");
 	if (IS_ERR(chip->vadc_dev)) {
 		ret = PTR_ERR(chip->vadc_dev);
@@ -1776,7 +1874,6 @@ static int  bq27520_battery_probe(struct i2c_client *client,
     if(ret < 0)
 		pr_info("do not update bqfs\n");
 
-	INIT_DELAYED_WORK(&chip->batt_worker,bq27520_batt_worker);
 	INIT_WORK(&chip->soc_work, bq27520_soc_worker);
 	wake_lock_init(&chip->soc_wlock, WAKE_LOCK_SUSPEND, "bq27520_soc");
 
@@ -1791,6 +1888,10 @@ static int  bq27520_battery_probe(struct i2c_client *client,
 		pr_err("power_supply_register bq27520 failed rc = %d\n", ret);
 		goto fail_psy;
 	}
+
+	ret = device_create_file(chip->bq27520_batt_psy.dev, &dev_attr_batt_type);
+	if (unlikely(ret < 0)) 
+		pr_err("failed: cannot create batt_type. ret=%d\n",ret);
 	
 	//----------------------------------------------
 	ret = bq27520_gpio_init(chip);
@@ -1825,17 +1926,24 @@ static int  bq27520_battery_probe(struct i2c_client *client,
 	//-----------------------------------------------
 	
 	bq27520_create_debugfs_entries(chip);
+	
+	bq27520_modify_opconfigb_wrtemp(chip);
 
 	bqfg_chip = chip;
-
-	bq27520_modify_opconfigb_wrtemp(chip);
 	
-	bq27520_batt_worker(&chip->batt_worker.work);
+	ret = ztemt_qpnp_spmi_init();
+	if(ret < 0)
+		pr_err("ztemt_qpnp_spmi_init fail!\n");	
+
+	//NUBIA_BATT
+	ret = bq27520_nubia_batt_init(chip);
+	if(ret < 0)
+		pr_err("bq27520_nubia_batt_init fail!\n");	
 
 	fw_version = bq27520_read_fw_version(chip);
 
-    pr_info("fw_version=0x%x\n",fw_version);
-	
+    pr_info("bq27520 successfully probed. fw_version=0x%x\n",fw_version);
+
     return 0;
 
 fail_psy:
@@ -1849,33 +1957,21 @@ static int bq27520_battery_remove(struct i2c_client *client)
 {	
 	struct bq27520_chip *bq27520 = i2c_get_clientdata(client);
 
-	cancel_delayed_work_sync(&bq27520->batt_worker);
 	kfree(bq27520);
 	bqfg_chip = NULL;
 
 	return 0;
 }
 
-static int bq27520_is_resume_soc_invalid(struct bq27520_chip *chip, int batt_soc)
-{
-    int soc_invalid = 0;
-
-	if(!chip->usbin_in_suspend && (batt_soc > chip->batt_soc))
-		soc_invalid = 1;
-
-	FGLOG_INFO("soc_invalid=%d sus_usb=%d\n",soc_invalid,chip->usbin_in_suspend);
-
-	return soc_invalid;
-}
 static int bq27520_suspend(struct i2c_client *cl, pm_message_t mesg)
 {
 	struct bq27520_chip *chip = i2c_get_clientdata(cl);
-
-	chip->usbin_in_suspend = bq_is_charger_present(chip);
 	
 	FGLOG_DEBUG("goto suspend.\n");
 	chip->is_sleep = 1;	
-	cancel_delayed_work_sync(&chip->batt_worker);
+	//NUBIA_BATT
+	nubia_batt_suspend(chip->batt_cntl);
+
 	return 0;
 };
 
@@ -1885,9 +1981,9 @@ static int bq27520_resume(struct i2c_client *cl)
 
 	FGLOG_DEBUG("goto resume.\n");
 	chip->is_sleep = 0; 
-	chip->resume_status = BQ_RESUME_WAKE_STAT;
-	schedule_delayed_work(&chip->batt_worker,
-				  round_jiffies_relative(msecs_to_jiffies(500)));
+	//NUBIA_BATT
+	nubia_batt_resume(chip->batt_cntl);
+
 	return 0;
 };
 
