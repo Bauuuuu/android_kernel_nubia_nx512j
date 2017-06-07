@@ -19,7 +19,6 @@ config ZTEMT_POWER_DEBUG
 	default y
 	help
 	  ZTEMT Power Debug Feature
-
 config PDA_POWER
 	tristate "Generic PDA/phone power driver"
 	depends on !S390
@@ -564,34 +563,12 @@ config ZTEMT_COMM_CHARGE
 	help
 	  ZTEMT comm  Charge 
 
-config ZTEMT_NX513_CHARGE
-	bool "ZTEMT NX513  Charge"
-	default n
-	help
-	  ZTEMT NX513  Charge 
-
-config ZTEMT_SMB1351_CHARGE
-	bool "ZTEMT SMB1351  Charge"
-	default n
-	help
-	  ZTEMT SMB1351  Charge  driver
-config ZTEMT_PM8916_BMS
-	bool "ZTEMT pm vm bms"
-	default n
-	help
-	  ZTEMT pm vm-bms
-
 config ZTEMT_BQ24296M_CHARGE
 	bool "ZTEMT BQ24296M Charge for NX511J"
 	default n
 	help
 	  ZTEMT BQ24296M Charge for NX511J
 
-config ZTEMT_BQ24296_CHARGE
-	bool "ZTEMT BQ24296 Charge"
-	default n
-	help
-	  ZTEMT BQ24296 Charge
 
 config ZTEMT_BATTERY_MONITOR
 	bool "ZTEMT Battery Monitor"
@@ -599,11 +576,6 @@ config ZTEMT_BATTERY_MONITOR
 	help
 	  ZTEMT Battery Monitor
 
-config ZTEMT_BATTERY_FG_LC709203F
-	bool "ZTEMT support feul gauge lc709203f"
-	default n
-	help
-	   Say Y here to support ZTEMT feul gauge lc709203f
 
 config ZTEMT_BQ27520_BATTERY
 	bool "ZTEMT BQ27520 Battery FG"
@@ -615,7 +587,42 @@ endmenu
 
 ################ztemt battery config
 
+################ztemt hw_version config start################
+config ZTEMT_HW_VERSION
+       bool "ZTEMT HW VERSION"
+       default n
+       help
+         ZTEMT HW VERSION
 
+config ZTEMT_HW_VERSION_DEBUG
+       bool "ZTEMT HW VERSION DEBUG"
+       depends on ZTEMT_HW_VERSION
+       default n
+       help
+         ZTEMT HW VERSION DEBUG
+
+config ZTEMT_HW_VERSION_NX519J
+       bool "ZTEMT HW VERSION NX519J"
+       depends on ZTEMT_HW_VERSION
+       default n
+       help
+         ZTEMT HW VERSION NX519J
+
+config ZTEMT_HW_VERSION_NX511J
+       bool "ZTEMT HW VERSION NX511J"
+       depends on ZTEMT_HW_VERSION
+       default n
+       help
+         ZTEMT HW VERSION NX511J
+
+config ZTEMT_HW_VERSION_NX511J_V3
+       bool "ZTEMT HW VERSION NX511J_V3"
+       depends on ZTEMT_HW_VERSION
+       default n
+       help
+         ZTEMT HW VERSION NX511J_V3
+
+################ztemt hw_version config end#################
 
 source "drivers/power/reset/Kconfig"
 

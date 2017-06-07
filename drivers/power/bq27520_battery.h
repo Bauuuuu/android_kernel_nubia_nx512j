@@ -1,8 +1,6 @@
 #ifndef __LINUX_BQ27520_CHARGER_H__
 #define __LINUX_BQ27520_CHARGER_H__
 
-#define DEFAULT_TEMP 250
-#define DEFAULT_SOC 50
 
 
 int bq27520_get_batt_voltage(void);
