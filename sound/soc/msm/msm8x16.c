@@ -689,7 +689,7 @@ static int msm_btsco_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 
 	return 0;
 }
-
+#ifdef CONFIG_SND_SOC_AK4375
 static int msm_bta2dp_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 					struct snd_pcm_hw_params *params)
 {
@@ -704,7 +704,7 @@ static int msm_bta2dp_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 
 	return 0;
 }
-
+#endif
 static int msm_proxy_rx_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 					struct snd_pcm_hw_params *params)
 {
@@ -2331,6 +2331,7 @@ static struct snd_soc_dai_link msm8x16_dai[] = {
 		.be_hw_params_fixup = msm_btsco_be_hw_params_fixup,
 		.ignore_suspend = 1,
 	},
+#ifdef CONFIG_SND_SOC_AK4375
 	{
 		.name = LPASS_BE_INT_BT_A2DP_RX,
 		.stream_name = "Internal BT-A2DP Playback",
@@ -2343,7 +2344,7 @@ static struct snd_soc_dai_link msm8x16_dai[] = {
 		.be_hw_params_fixup = msm_bta2dp_be_hw_params_fixup,
 		.ignore_suspend = 1,
 	},
-
+#endif
 	{
 		.name = LPASS_BE_INT_FM_RX,
 		.stream_name = "Internal FM Playback",
