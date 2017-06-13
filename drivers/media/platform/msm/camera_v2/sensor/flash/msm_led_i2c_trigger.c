@@ -26,13 +26,8 @@
 #define CAM_FLASH_PINCTRL_STATE_DEFAULT "cam_flash_default"
 
 //#define CONFIG_MSMB_CAMERA_DEBUG
-#ifdef CONFIG_MSMB_CAMERA_DEBUG
 #undef CDBG
-#define CDBG(fmt, args...) pr_info(fmt, ##args)
-#else
-#undef CDBG
-#define CDBG(fmt, args...) do {} while(0)
-#endif
+#define CDBG(fmt, args...) pr_debug(fmt, ##args)
 
 static void *g_fctrl;
 int32_t msm_led_i2c_trigger_get_subdev_id(struct msm_led_flash_ctrl_t *fctrl,
@@ -351,7 +346,7 @@ int msm_flash_led_off(struct msm_led_flash_ctrl_t *fctrl)
 
 	flashdata = fctrl->flashdata;
 	power_info = &flashdata->power_info;
-	pr_info("%s:%d called\n", __func__, __LINE__);
+	CDBG("%s:%d called\n", __func__, __LINE__);
 	msm_flash_clear_flag_mask(fctrl);
 
 	if (fctrl->flash_i2c_client && fctrl->reg_setting) {
@@ -374,7 +369,7 @@ int msm_flash_led_low(struct msm_led_flash_ctrl_t *fctrl)
 	int rc = 0;
 	struct msm_camera_sensor_board_info *flashdata = NULL;
 	struct msm_camera_power_ctrl_t *power_info = NULL;
-	pr_info("%s:%d called\n", __func__, __LINE__);
+	CDBG("%s:%d called\n", __func__, __LINE__);
 
 	if (fctrl->led_state != MSM_CAMERA_LED_INIT) {
 		pr_err("%s:%d invalid led state\n", __func__, __LINE__);
@@ -413,7 +408,7 @@ int msm_flash_led_high(struct msm_led_flash_ctrl_t *fctrl)
 	int rc = 0;
 	struct msm_camera_sensor_board_info *flashdata = NULL;
 	struct msm_camera_power_ctrl_t *power_info = NULL;
-	pr_info("%s:%d called\n", __func__, __LINE__);
+	CDBG("%s:%d called\n", __func__, __LINE__);
 
 	if (fctrl->led_state != MSM_CAMERA_LED_INIT) {
 		pr_err("%s:%d invalid led state\n", __func__, __LINE__);
@@ -861,7 +856,6 @@ int msm_flash_i2c_probe(struct i2c_client *client,
 	if (!dentry)
 		pr_err("Failed to create the debugfs ledflash file");
 #endif
-	pr_info("%s:%d probe success\n", __func__, __LINE__);
 	/* Assign Global flash control sturcture for local usage */
 	g_fctrl = (void *) fctrl;
 	rc = msm_i2c_torch_create_classdev(&(client->dev), NULL);
@@ -936,7 +930,7 @@ int msm_flash_probe(struct platform_device *pdev,
 			&msm_sensor_cci_func_tbl;
 
 	rc = msm_led_flash_create_v4lsubdev(pdev, fctrl);
-	pr_info("%s: probe success\n", __func__);
+
 	/* Assign Global flash control sturcture for local usage */
 	g_fctrl = (void *)fctrl;
 	rc = msm_i2c_torch_create_classdev(&(pdev->dev), NULL);
