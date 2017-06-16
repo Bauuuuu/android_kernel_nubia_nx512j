@@ -553,7 +553,7 @@ void hdd_wlan_get_version(hdd_adapter_t *pAdapter, union iwreq_data *wrqu,
         pHWversion = "Unknown";
     }
 
-//    status = wcnss_get_iris_name(iris_name);
+    status = wcnss_get_iris_name(iris_name);
 
     if (!status) {
         pIRISversion = iris_name;
