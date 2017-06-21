@@ -7,6 +7,7 @@ config ARM64
 	select ARCH_WANT_OPTIONAL_GPIOLIB
 	select ARCH_WANT_COMPAT_IPC_PARSE_VERSION
 	select ARCH_WANT_FRAME_POINTERS
+	select ARCH_THREAD_INFO_ALLOCATOR if !ARM64_64K_PAGES
 	select ARM_AMBA
 	select ARM_ARCH_TIMER
 	select ARM_GIC
@@ -82,6 +83,9 @@ config MMU
 config NO_IOPORT_MAP
 	def_bool y
 
+config ILLEGAL_POINTER_VALUE
+	hex
+	default 0xdead000000000000
 
 config STACKTRACE_SUPPORT
 	def_bool y
@@ -522,6 +526,15 @@ config FORCE_MAX_ZONEORDER
 	int
 	default "14" if (ARM64_64K_PAGES && TRANSPARENT_HUGEPAGE)
 	default "11"
+
+config KEXEC
+       depends on (!SMP || PM_SLEEP_SMP)
+       bool "kexec system call"
+       ---help---
+         kexec is a system call that implements the ability to shutdown your
+         current kernel, and to start another kernel.  It is like a reboot
+         but it is independent of the system firmware.   And like a reboot
+         you can start any kernel with it, not just Linux.
 
 config SECCOMP
 	bool "Enable seccomp to safely compute untrusted bytecode"
