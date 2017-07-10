@@ -223,7 +223,35 @@ int msm_flash_led_init(struct msm_led_flash_ctrl_t *fctrl)
 		if (rc < 0)
 			pr_err("%s:%d failed\n", __func__, __LINE__);
 	}
+	//ztemt added by congshan start
+     rc = 0;	
+	//ztemt added by congshan start
 	fctrl->led_state = MSM_CAMERA_LED_INIT;
+	return rc;
+}
+
+static int msm_flash_clear_flag_mask(struct msm_led_flash_ctrl_t *fctrl)
+{
+	int rc = 0;
+	uint16_t mask = 0;
+
+	if (!fctrl) {
+		pr_err("%s:%d fctrl NULL\n", __func__, __LINE__);
+		return -EINVAL;
+	}
+
+	if (fctrl->reg_setting->flag_array && fctrl->flash_i2c_client) {
+		rc = fctrl->flash_i2c_client->i2c_func_tbl->i2c_read(
+			fctrl->flash_i2c_client,
+			fctrl->reg_setting->flag_array[0].reg_addr, &mask, 
+			MSM_CAMERA_I2C_BYTE_DATA);
+		if (rc < 0) {
+			pr_err("%s:%d failed\n", __func__, __LINE__);
+			return rc;
+		}
+
+		pr_info("%s:%d flag_mask 0x%02x\n", __func__, __LINE__, mask);
+	}
 	return rc;
 }
 
@@ -245,6 +273,16 @@ int msm_flash_led_release(struct msm_led_flash_ctrl_t *fctrl)
 		pr_err("%s:%d invalid led state\n", __func__, __LINE__);
 		return -EINVAL;
 	}
+	msm_flash_clear_flag_mask(fctrl);
+	//added by congshan start
+	if (fctrl->flash_i2c_client && fctrl->reg_setting->release_setting) {
+		rc = fctrl->flash_i2c_client->i2c_func_tbl->i2c_write_table(
+			fctrl->flash_i2c_client,
+			fctrl->reg_setting->release_setting);
+		if (rc < 0)
+			pr_err("%s:%d failed\n", __func__, __LINE__);
+	}
+	//added by congshan end
 	gpio_set_value_cansleep(
 		power_info->gpio_conf->gpio_num_info->
 		gpio_num[SENSOR_GPIO_FL_EN],
@@ -308,6 +346,8 @@ int msm_flash_led_off(struct msm_led_flash_ctrl_t *fctrl)
 	flashdata = fctrl->flashdata;
 	power_info = &flashdata->power_info;
 	CDBG("%s:%d called\n", __func__, __LINE__);
+	msm_flash_clear_flag_mask(fctrl);
+
 	if (fctrl->flash_i2c_client && fctrl->reg_setting) {
 		rc = fctrl->flash_i2c_client->i2c_func_tbl->i2c_write_table(
 			fctrl->flash_i2c_client,
@@ -337,6 +377,9 @@ int msm_flash_led_low(struct msm_led_flash_ctrl_t *fctrl)
 
 	flashdata = fctrl->flashdata;
 	power_info = &flashdata->power_info;
+
+	msm_flash_clear_flag_mask(fctrl);
+
 	gpio_set_value_cansleep(
 		power_info->gpio_conf->gpio_num_info->
 		gpio_num[SENSOR_GPIO_FL_EN],
@@ -373,6 +416,9 @@ int msm_flash_led_high(struct msm_led_flash_ctrl_t *fctrl)
 
 	flashdata = fctrl->flashdata;
 	power_info = &flashdata->power_info;
+
+	msm_flash_clear_flag_mask(fctrl);
+
 	gpio_set_value_cansleep(
 		power_info->gpio_conf->gpio_num_info->
 		gpio_num[SENSOR_GPIO_FL_EN],
