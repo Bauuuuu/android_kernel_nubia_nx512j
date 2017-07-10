@@ -430,6 +430,17 @@ struct mdss_panel_info {
 	bool is_prim_panel;
 
 	char panel_name[MDSS_MAX_PANEL_LEN];
+
+    bool avdd_enabled;
+    u32  avdd_vsp_voltage;
+    u32  avdd_vsn_voltage;
+    u32  avdd_vsp_vsn_delay;
+    u32  before_panel_on_cmd_delay;
+    u32  before_avdd_off_delay;
+	u32 delay_18_to_55;
+	u32 rst_gpio_before_avdd_off;
+	u32 disable_dimming_when_suspend;
+
 	struct mdss_mdp_pp_tear_check te;
 
 	struct lcd_panel_info lcdc;
