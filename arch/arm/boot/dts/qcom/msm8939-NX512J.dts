@@ -1,0 +1,85 @@
+/* Copyright (c) 2014, The Linux Foundation. All rights reserved.
+*
+* This program is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License version 2 and
+* only version 2 as published by the Free Software Foundation.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*/
+
+/dts-v1/;
+
+#include "msm8939.dtsi"
+#include "NX512J/msm8939-mtp-sdhc2.dtsi"
+#include "msm8939-mtp.dtsi"
+#include "NX512J/msm8939-mtp-nfc.dtsi"
+#include "NX512J/msm8939-common.dtsi"
+#include "NX512J/msm8939-audio-internal_codec.dtsi"
+#include "NX512J/msm8939-mtp-keys.dtsi"
+#include "NX512J/msm8939-mtp-sensor.dtsi"
+#include "NX512J/msm8939-mtp-tp.dtsi"
+#include "NX512J/msm8939-pinctrl-ztemt.dtsi"
+#include "NX512J/msm8939-mdss-pll.dtsi"
+#include "NX512J/msm8939-mdss.dtsi"
+#include "NX512J/msm8939-mtp-lcd.dtsi"
+#include "NX512J/msm8916-vbus-otg.dtsi"
+#include "NX512J/msm8939-mtp-breathlight.dtsi"
+#include "NX512J/msm8939-mtp-fuelgauge.dtsi"
+#include "NX512J/msm8939-mtp-charger.dtsi"
+#include "NX512J/msm8939-camera-sensor-mtp.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. MSM 8939 MTP";
+	compatible = "qcom,msm8939-mtp", "qcom,msm8939", "qcom,mtp";
+	qcom,board-id = <8 1>;
+};
+
+&cci {
+	qcom,camera@0 {
+		qcom,led-flash-src = <&led_flash0>;
+	};
+};
+
+&soc {
+	qcom,lpm-workarounds {
+		/delete-property/ qcom,lpm-wa-skip-l2-spm;
+	};
+
+	qcom,ipc_router_modem_xprt {
+		/delete-property/ qcom,disable-pil-loading;
+	};
+
+	// add i2c qup3 (gpio10 gpio11)
+	i2c_3: i2c@78b7000 { /* BLSP1 QUP3 */
+		compatible = "qcom,i2c-msm-v2";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg-names = "qup_phys_addr";
+		reg = <0x78b7000 0x1000>;
+		interrupt-names = "qup_irq";
+		interrupts = <0 97 0>;
+		qcom,clk-freq-out = <100000>;
+		qcom,clk-freq-in  = <19200000>;
+		clock-names = "iface_clk", "core_clk";
+		clocks = <&clock_gcc clk_gcc_blsp1_ahb_clk>,
+			 <&clock_gcc clk_gcc_blsp1_qup3_i2c_apps_clk>;
+				pinctrl-names = "i2c_active", "i2c_sleep";
+		pinctrl-0 = <&i2c_3_active>;
+		pinctrl-1 = <&i2c_3_sleep>;
+		qcom,noise-rjct-scl = <0>;
+		qcom,noise-rjct-sda = <0>;
+		dmas = <&dma_blsp1 8 64 0x20000020 0x20>,
+			<&dma_blsp1 9 32 0x20000020 0x20>;
+		dma-names = "tx", "rx";
+		qcom,master-id = <86>;
+	};
+
+	qcom,smem@86300000 {
+		qcom,smd-modem {
+			/delete-property/ qcom,not-loadable;
+		};
+	};
+};

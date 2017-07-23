@@ -1,0 +1,151 @@
+/* Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&soc {
+	tlmm_pinmux: pinctrl@1000000 {
+		compatible = "qcom,msm-tlmm-8939", "qcom,msm-tlmm-8916";
+		reg = <0x1000000 0x300000>;
+		interrupts = <0 208 0>;
+
+		// ZTEMT ADD START BY ZHOUQIFANG FOR AW9106B'S NODE
+		  aw9016b_ctl_pin:aw9106b_ctl_pin {
+			qcom,pins = <&gp 17>;  //qcom,pins = <&gp 17>, <&gp 10>;
+			qcom,num-grp-pins = <1>;			   //qcom,num-grp-pins = <2>;
+			qcom,pin-func = <0>;
+			label = "aw9106b_ctl_pin";
+
+			/* active state*/
+			aw9106b_ctl_active: active {
+				drive-strength = <6>;
+				bias-disable;
+			};
+
+			/*suspended state*/
+			aw9106b_ctl_suspend: suspend {
+				drive-strength = <6>;
+				bias-disable;
+			};
+		};
+		// add i2c qup3 (gpio10 gpio11)
+		pmx_i2c_3 {
+			qcom,pins = <&gp 10>, <&gp 11>; /* SDA, SCL */
+			qcom,num-grp-pins = <2>;
+			qcom,pin-func = <2>;
+			label = "pmx_i2c_3";
+
+			i2c_3_active: i2c_3_active {
+				drive-strength = <2>;
+				bias-disable;
+			};
+
+			i2c_3_sleep: i2c_3_sleep {
+				drive-strength = <2>;
+				bias-disable;
+			};
+		};
+
+		tlmm_gpio_key {
+		/delete-property/ qcom,pins;
+			qcom,pins = <&gp 107>, <&gp 108>;
+		/delete-property/ qcom,num-grp-pins;
+			qcom,num-grp-pins = <2>;
+		};
+
+// touchscreen cypress and gt1x		
+		gt1x_int_pin {
+			qcom,pins = <&gp 13>;
+			qcom,num-grp-pins = <1>;
+			qcom,pin-func = <0>;
+			label = "gt1x_int_pin";
+			/*active state*/
+			gt1x_int_active: gt1x_int_active {
+				drive-strength = <2>;/*2MA*/
+				bias-disable;
+			};
+			/*suspended state*/
+			gt1x_int_suspend: gt1x_int_suspend {
+				drive-strength = <2>;/*2MA*/
+				bias-disable;
+			};
+		};
+
+		gt1x_rst_pin {
+			qcom,pins = <&gp 12>;
+			qcom,num-grp-pins = <1>;
+			qcom,pin-func = <0>;
+			label = "gt1x_rst_pin";
+
+			gt1x_rst_active: gt1x_rst_active {
+				drive-strength = <10>;
+				bias-pull-up;
+			};
+
+			gt1x_rst_suspend: gt1x_rst_suspend {
+				drive-strength = <2>;
+				bias-high-impedance;
+			};
+		};
+
+		cyttsp5_irq_pin {
+			qcom,pins = <&gp 13>;
+			qcom,num-grp-pins = <1>;
+			qcom,pin-func = <0>;
+			label = "cyttsp5_irq_pin";
+
+			cyttsp5_irq_active: cyttsp5_irq_active {
+				drive-strength = <10>;
+				bias-pull-up;
+			};
+
+			cyttsp5_irq_suspend: cyttsp5_irq_suspend {
+				drive-strength = <2>;
+				bias-pull-up;
+			};
+		};
+		cyttsp5_rst_pin {
+			qcom,pins = <&gp 12>;
+			qcom,num-grp-pins = <1>;
+			qcom,pin-func = <0>;
+			label = "cyttsp5_rst_pin";
+
+			cyttsp5_rst_active: cyttsp5_rst_active {
+				drive-strength = <10>;
+				bias-pull-up;
+			};
+
+			cyttsp5_rst_suspend: cyttsp5_rst_suspend {
+				drive-strength = <2>;
+				bias-disable;
+			};
+		};
+
+        // CONFIG_ZTEMT_BQ27520_BATTERY
+	    bq27520_battery_pin {
+			qcom,pins = <&gp 51>, <&gp 114>;
+			qcom,num-grp-pins = <2>;
+			qcom,pin-func = <0>;
+			label = "bq27520_int_gpio";
+			/* active state */
+			bq27520_int_default: default {
+				drive-strength = <2>; /* 2 MA */
+				bias-pull-up;		/* PULL UP*/
+			};
+			/*suspended state */
+			bq27520_int_sleep: sleep {
+				drive-strength = <2>; /* 2 MA */
+				bias-disable = <0>; /* No PULL */
+			};
+	    };
+	};
+};
+
+

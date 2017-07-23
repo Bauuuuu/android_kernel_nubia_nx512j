@@ -1,0 +1,23 @@
+# Nubia configuration options
+
+config MACH_NUBIA
+	bool "Nubia device"
+	depends on ARCH_MSM
+	help
+	  Support for Nubia products
+
+config MACH_NUBIA_MSM8939
+	bool "Nubia MSM8939"
+	depends on ARCH_MSM8916
+	select MACH_NUBIA
+	help
+	  Support for MSM8939 Nubia variants
+menu "Nubia board selection"
+
+config MACH_NX512J
+	bool "NX512J board"
+	select MACH_NUBIA_MSM8939
+	help
+	  Support for Nubia NX512J variant
+
+endmenu
