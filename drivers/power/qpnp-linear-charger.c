@@ -24,6 +24,14 @@
 #include <linux/alarmtimer.h>
 #include <linux/bitops.h>
 #include <linux/leds.h>
+
+#ifdef CONFIG_ZTEMT_EXT_CHG_FG
+#include "ztemt_power_supply_common.h"
+#endif
+
+#ifdef CONFIG_ZTEMT_BQ24296M_CHARGE 
+	#include "linux/power/bq24296m_charger.h"
+#endif
 #include <linux/debugfs.h>
 
 #define CREATE_MASK(NUM_BITS, POS) \
@@ -129,6 +137,10 @@
 
 #define QPNP_CHARGER_DEV_NAME	"qcom,qpnp-linear-charger"
 
+#ifdef CONFIG_ZTEMT_BQ24296M_CHARGE
+	#define ZTEMT_LI_BATTERY
+#endif
+
 /* usb_interrupts */
 
 struct qpnp_lbc_irq {
@@ -195,6 +207,13 @@ static inline int get_bpd(const char *name)
 	return -EINVAL;
 }
 
+//ZTEMT use pmic power_supply_property as below
+#if defined(CONFIG_ZTEMT_BQ27520_BATTERY) && defined(CONFIG_ZTEMT_BQ24296M_CHARGE)
+enum power_supply_property msm_batt_power_props[] = {
+	POWER_SUPPLY_PROP_PRESENT,
+	POWER_SUPPLY_PROP_TEMP,
+};
+#else
 static enum power_supply_property msm_batt_power_props[] = {
 	POWER_SUPPLY_PROP_CHARGING_ENABLED,
 	POWER_SUPPLY_PROP_STATUS,
@@ -210,7 +229,11 @@ static enum power_supply_property msm_batt_power_props[] = {
 	POWER_SUPPLY_PROP_COOL_TEMP,
 	POWER_SUPPLY_PROP_WARM_TEMP,
 	POWER_SUPPLY_PROP_SYSTEM_TEMP_LEVEL,
+	#ifdef ZTEMT_LI_BATTERY   
+	POWER_SUPPLY_PROP_TECHNOLOGY,
+	#endif
 };
+#endif
 
 static char *pm_batt_supplied_to[] = {
 	"bms",
@@ -1725,6 +1748,11 @@ static int qpnp_batt_power_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_SYSTEM_TEMP_LEVEL:
 		val->intval = chip->therm_lvl_sel;
 		break;
+#ifdef ZTEMT_LI_BATTERY
+	case POWER_SUPPLY_PROP_TECHNOLOGY:
+		val->intval = POWER_SUPPLY_TECHNOLOGY_LION;
+		break;
+#endif		
 	default:
 		return -EINVAL;
 	}
@@ -2093,6 +2121,8 @@ static int qpnp_lbc_usb_path_init(struct qpnp_lbc_chip *chip)
 	 * Note: Explicitly disabling charging is only a debug/test
 	 * configuration
 	 */
+#ifndef CONFIG_ZTEMT_BQ24296M_CHARGE
+
 		reg_val = 0x0;
 		rc = __qpnp_lbc_secure_write(chip->spmi, chip->chgr_base,
 				CHG_PERPH_RESET_CTRL3_REG, &reg_val, 1);
@@ -2100,6 +2130,7 @@ static int qpnp_lbc_usb_path_init(struct qpnp_lbc_chip *chip)
 			pr_err("Failed to configure PERPH_CTRL3 rc=%d\n", rc);
 		else
 			pr_debug("Charger is not following PMIC reset\n");
+#endif
 	} else {
 		/*
 		 * Enable charging explictly,
@@ -2327,6 +2358,9 @@ static int qpnp_charger_read_dt_props(struct qpnp_lbc_chip *chip)
 		of_property_read_bool(chip->spmi->dev.of_node,
 					"qcom,charging-disabled");
 
+#if defined(CONFIG_ZTEMT_BQ24296M_CHARGE) 
+		chip->cfg_charging_disabled = 1;
+#endif  
 	/* Get the fake-batt-values property */
 	chip->cfg_use_fake_battery =
 			of_property_read_bool(chip->spmi->dev.of_node,
@@ -2467,6 +2501,9 @@ static irqreturn_t qpnp_lbc_usbin_valid_irq_handler(int irq, void *_chip)
 
 	if (chip->usb_present ^ usb_present) {
 		chip->usb_present = usb_present;
+#ifdef CONFIG_ZTEMT_BQ24296M_CHARGE 
+		bq24296_start_chg_work(usb_present);
+#endif
 		if (!usb_present) {
 			qpnp_lbc_charger_enable(chip, CURRENT, 0);
 			spin_lock_irqsave(&chip->ibat_change_lock, flags);
@@ -3267,6 +3304,15 @@ static int qpnp_lbc_main_probe(struct spmi_device *spmi)
 		chip->batt_psy.supplied_to = pm_batt_supplied_to;
 		chip->batt_psy.num_supplicants =
 			ARRAY_SIZE(pm_batt_supplied_to);
+
+#ifdef CONFIG_ZTEMT_EXT_CHG_FG
+	    rc = ztemt_chg_batt_prop_init(&chip->batt_psy);
+	    if (rc == -EPROBE_DEFER){
+		    pr_err("ztemt_chg_batt_prop_init not found deferring probe\n");
+		    return rc;
+     	}
+#endif
+	
 		rc = power_supply_register(chip->dev, &chip->batt_psy);
 		if (rc < 0) {
 			pr_err("batt failed to register rc=%d\n", rc);

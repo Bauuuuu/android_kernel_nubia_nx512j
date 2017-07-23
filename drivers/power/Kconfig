@@ -553,6 +553,44 @@ config MSM_BCL_PERIPHERAL_CTL
 	  provides routines to configure and monitor the BCL
 	  PMIC peripheral.
 
+################ZTEMT charger
+menu "ZTEMT charger and battery"
+
+config ZTEMT_EXT_CHG_FG
+	bool "ZTEMT extern charger and FG"
+	default n
+	help
+	  ZZTEMT extern charger and FG 
+	  
+config ZTEMT_COMM_CHARGE
+	bool "ZTEMT comm  Charge"
+	default n
+	help
+	  ZTEMT comm  Charge 
+
+config ZTEMT_BQ24296M_CHARGE
+	bool "ZTEMT BQ24296M Charge for NX511J"
+	default n
+	help
+	  ZTEMT BQ24296M Charge for NX511J
+
+
+config ZTEMT_BATTERY_MONITOR
+	bool "ZTEMT Battery Monitor"
+	default n
+	help
+	  ZTEMT Battery Monitor
+
+
+config ZTEMT_BQ27520_BATTERY
+	bool "ZTEMT BQ27520 Battery FG"
+	default n
+	help
+	  ZTEMT BQ27520 Battery FG
+	  
+endmenu
+
+################ztemt battery config
 source "drivers/power/reset/Kconfig"
 
 endif # POWER_SUPPLY
