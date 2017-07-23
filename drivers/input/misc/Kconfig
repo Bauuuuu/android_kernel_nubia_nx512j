@@ -893,5 +893,64 @@ config SENSORS_BMI160_ENABLE_INT2
 	help
 	 If you say yes here, you get INT2 support for Bosch Sensortec
 	 sensors BMI160.
+
+config NUBIA_SENSORS_COMPASS_AKM09911
+	tristate "NUBIA AKM09911"
+	depends on I2C
+	help
+	  If you say yes here you get support for AKM's
+	  compass NUBIA AKM09911
+
+config NUBIA_SENSORS_TMD2772
+	tristate "TMD2772 device driver"
+	depends on I2C
+	help
+	  If you say yes here you get support for AMS's
+	  als ps TMD2772
+
+config NUBIA_SENSORS_HALL_DEVICE
+	tristate "hall devicedriver"
+	help
+	  If you say yes here you get support for
+	  hall device
+
+menuconfig NUBIA_SENSORS_LSM6DX0
+    tristate "STMicroelectronics LSM6DS0 and LSM6DL0"
+	depends on I2C
+	help
+		Say Y here to enable STMicroelectronics LSM6DS0 or LSM6DL0inertial module.
+
+		To compile this driver as a module, choose M here: the
+		module will be called lsm6dx0.
+
+if NUBIA_SENSORS_LSM6DX0
+
+	choice
+	    prompt "LSM6DS0 or LSM6DL0"
+		default SENSORS_LSM6DX0_S_MODEL
+
+	config SENSORS_LSM6DX0_S_MODEL
+	    boolean "LSM6DS0"
+		depends on NUBIA_SENSORS_LSM6DX0
+		help
+		    Select this to enable the LSM6DS0 model to be supported.
+	config SENSORS_LSM6DX0_L_MODEL
+	    boolean "LSM6DL0"
+		depends on NUBIA_SENSORS_LSM6DX0
+		select SENSORS_LSM6DX0_LP
+		help
+		    Select this to enable the LSM6DS0 model to be supported.
+    endchoice
+
+	config SENSORS_LSM6DX0_SW_COMP
+	    bool "STMicroelectronics LSM6DS0 Software temperature compensation"
+	    help
+		    Say Y here to enable software temperature compensation and disable hardware one.
+	config SENSORS_LSM6DX0_LP
+	    bool "STMicroelectronics LSM6DS0 Enable Gyroscpe Low Power mode"
+		help
+		    Say Y here to enable Low Power mode.
+endif
+
 endif
 
