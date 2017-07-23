@@ -830,5 +830,46 @@ config SENSORS_BMI058
 	 If you say yes here, you get support for Bosch Sensortec's
 	 sensor driver of BMI058.
 
+config NUBIA_SENSORS_COMPASS_AKM09911
+	tristate "NUBIA AKM09911"
+	depends on I2C
+	help
+	  If you say yes here you get support for AKM's
+	  compass NUBIA AKM09911
+
+config NUBIA_SENSORS_TMD2772
+	tristate "TMD2772 device driver"
+	depends on I2C
+	help
+	  If you say yes here you get support for AMS's
+	  als ps TMD2772
+
+config NUBIA_SENSORS_HALL_DEVICE
+	tristate "hall devicedriver"
+	help
+	  If you say yes here you get support for
+	  hall device
+
+menuconfig NUBIA_SENSORS_LSM6DX0
+    tristate "STMicroelectronics LSM6DS0 and LSM6DL0"
+	depends on I2C
+	help
+		Say Y here to enable STMicroelectronics LSM6DS0 or LSM6DL0inertial module.
+
+		To compile this driver as a module, choose M here: the
+		module will be called lsm6dx0.
+
+config INPUT_LSM6DX0
+	tristate "STMicroelectronics LSM6DS0 and LSM6DL0"
+	depends on INPUT
+	depends on I2C
+	help
+	  Say Y here to enable STMicroelectronics LSM6DS0 or LSM6DL0inertial
+	  module.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called lsm6dx0.
+
+
 endif
 
