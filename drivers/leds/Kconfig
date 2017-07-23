@@ -495,6 +495,12 @@ config LEDS_MAX8997
 	  This option enables support for on-chip LED drivers on
 	  MAXIM MAX8997 PMIC.
 
+config NUBIA_LIQUID_LED
+	tristate "aw9106b i2c led"
+	depends on I2C
+	help
+	  if you say use aw9106b, select it.
+
 config LEDS_LM355x
 	tristate "LED support for LM355x Chips, LM3554 and LM3556"
 	depends on LEDS_CLASS && I2C
