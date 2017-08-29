@@ -44,7 +44,7 @@
 			};
 		};
 
-		lsm6ds0_int_pin {
+        lsm6ds0_int_pin {
 			qcom,pins = <&gp 115>;
 			qcom,pin-func = <0>;
 			qcom,num-grp-pins = <1>;
@@ -56,7 +56,7 @@
 			lsm6ds0_sleep: lsm6ds0_sleep {
 				bias-high-impedance;
 			};
-		};
+        };
 
 		akm_reset_pin {
 			qcom,pins = <&gp 69>;

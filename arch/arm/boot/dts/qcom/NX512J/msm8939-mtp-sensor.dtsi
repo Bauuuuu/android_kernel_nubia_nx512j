@@ -12,6 +12,29 @@
 
 #include "msm8939-sensor-pinctrl.dtsi"
 
+&i2c_0 {
+    lsm6ds0@6a {
+        compatible = "st,lsm6dx0";
+        reg = <0x6a>;
+        pinctrl-names = "lsm6ds0_default","lsm6ds0_sleep";
+        pinctrl-0 = <&lsm6ds0_default>;
+        pinctrl-1 = <&lsm6ds0_sleep>;
+        vdd-supply = <&pm8916_l17>;
+        vio-supply = <&pm8916_l6>;
+        rot-matrix = /bits/ 16
+            <(0) (-1) (0)
+             (-1) (0) (0)
+             (0) (0) (-1)>;
+        g-poll-interval = <100>;
+        g-min-interval = <2>;
+        g-fs-range = <0>;
+        x-poll-interval = <100>;
+        x-min-interval = <1>;
+        x-fs-range = <0>;
+        aa-filter-bw = <0>;
+    };
+};
+
 &soc {
 	i2c@78b6000 { /* BLSP1 QUP2 */
 		ams-sensor@39 {
@@ -27,26 +50,6 @@
 			vio-supply = <&pm8916_l6>;
 			ams,pul_cnt = <12>;
 			ams,light-percent = <150>;
-		};
-
-		lsm6ds0@0x6A {
-			compatible = "st,lsm6ds0";
-			reg = <0x6A>;
-			pinctrl-names = "lsm6ds0_default","lsm6ds0_sleep";
-			pinctrl-0 = <&lsm6ds0_default>;
-			pinctrl-1 = <&lsm6ds0_sleep>;
-			vdd-supply = <&pm8916_l17>;
-			vio-supply = <&pm8916_l6>;
-			rot-matrix = /bits/ 16 <(0) (-1) (0)
-				(-1) (0) (0)
-				(0) (0) (-1)>;
-			g-poll-interval = <100000>;
-			g-min-interval = <10000>;
-			g-fs-range = <24>;
-			x-poll-interval = <100000>;
-			x-min-interval = <10000>;
-			x-fs-range = <16>;
-			aa-filter-bw = <0>;
 		};
 
 		akm@c {
