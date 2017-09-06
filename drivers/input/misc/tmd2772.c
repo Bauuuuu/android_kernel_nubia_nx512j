@@ -97,6 +97,7 @@ static struct sensors_classdev sensors_light_cdev = {
 	.delay_msec = 500,
 	.sensors_enable = NULL,
 	.sensors_poll_delay = NULL,
+	.flags = 2,
 };
 
 static struct sensors_classdev sensors_proximity_cdev = {
@@ -115,6 +116,7 @@ static struct sensors_classdev sensors_proximity_cdev = {
 	.delay_msec = 100,
 	.sensors_enable = NULL,
 	.sensors_poll_delay = NULL,
+	.flags = 3,
 };
 
 /* function implementation */
