@@ -2981,7 +2981,7 @@ static int32_t lsm6dx0_acc_gyr_probe(struct i2c_client *client,
 	stat->acc_cdev.sensors_calibrate = lsm6d_acc_cdev_calibrate;
 	stat->acc_cdev.sensors_write_cal_params = lsm6d_acc_cdev_write_cal_params;
 	stat->ktime_acc = ktime_set(0, MS_TO_NS(sensors_accel_cdev.delay_msec));
-	err = sensors_classdev_register(&client->dev, &stat->acc_cdev);
+	err = sensors_classdev_register(&stat->input_dev_acc->dev, &stat->acc_cdev);
 	if (err < 0) {
 		dev_err(&client->dev, "sensors class register failed!\n");
 		goto err_input_cleanup;
@@ -2993,7 +2993,7 @@ static int32_t lsm6dx0_acc_gyr_probe(struct i2c_client *client,
 	stat->gyr_cdev.sensors_calibrate = lsm6d_gyr_cdev_calibrate;
 	stat->gyr_cdev.sensors_write_cal_params = lsm6d_gyr_cdev_write_cal_params;
 	stat->ktime_gyr = ktime_set(0, MS_TO_NS(sensors_gyro_cdev.delay_msec));
-	err = sensors_classdev_register(&client->dev, &stat->gyr_cdev);
+	err = sensors_classdev_register(&stat->input_dev_gyr->dev, &stat->gyr_cdev);
 	if (err < 0) {
 		dev_err(&client->dev, "sensors class register failed!\n");
 		goto err_input_cleanup;

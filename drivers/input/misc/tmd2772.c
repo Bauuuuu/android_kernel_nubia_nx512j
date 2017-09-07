@@ -3103,13 +3103,13 @@ static int tmd2772_probe(struct i2c_client *clientp, const struct i2c_device_id 
 	taos_data->ps_cdev.sensors_enable = tmd2772_ps_set_enable;
 	taos_data->ps_cdev.sensors_poll_delay = NULL;
 
-	ret = sensors_classdev_register(&clientp->dev, &taos_data->als_cdev);
+	ret = sensors_classdev_register(&taos_data->a_idev->dev, &taos_data->als_cdev);
 	if (ret) {
 		SENSOR_LOG_ERROR("register to sensor class failed: %d\n", ret);
 		goto als_sensor_register_failed;
 	}
 
-	ret = sensors_classdev_register(&clientp->dev, &taos_data->ps_cdev);
+	ret = sensors_classdev_register(&taos_data->p_idev->dev, &taos_data->ps_cdev);
 	if (ret) {
 		SENSOR_LOG_ERROR("register to sensor class failed: %d\n", ret);
 		goto classdev_register_failed;
