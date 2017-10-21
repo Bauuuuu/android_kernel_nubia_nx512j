@@ -14,9 +14,9 @@
 #define __BQFS_FILE__
 
 #include "bqfs_cmd_type.h"
-#define   BQFS_VERSION_SAM		"ZTEZ906"
+#define   BQFS_VERSION		"ZTEZ906"
 
-const bqfs_cmd_t bqfs_image_samsung[] = {
+const bqfs_cmd_t bqfs_image[] = {
 	{
 		.cmd_type	= CMD_W,
 		.addr		= 0x16,
@@ -40,7 +40,7 @@ const bqfs_cmd_t bqfs_image_samsung[] = {
 	},
 	{
 		.cmd_type	= CMD_X,
-		.data		= {.delay = 400},  //ZTEMT swang, should modify 200 to 400
+		.data		= {.delay = 400},
 	},
 	{
 		.cmd_type	= CMD_C,
