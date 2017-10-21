@@ -12,6 +12,28 @@
 
 #include "msm8939-sensor-pinctrl.dtsi"
 
+&i2c_0 {
+    lsm6ds0@6a {
+        compatible = "st,lsm6dx0";
+        reg = <0x6a>;
+        pinctrl-names = "lsm6ds0_default","lsm6ds0_sleep";
+        pinctrl-0 = <&lsm6ds0_default>;
+        pinctrl-1 = <&lsm6ds0_sleep>;
+        vdd-supply = <&pm8916_l17>;
+        vio-supply = <&pm8916_l6>;
+        rot-matrix = /bits/ 16
+            <(-1) (0) (0)
+             (0) (1) (0)
+             (0) (0) (-1)>;
+        g-poll-interval = <100>;
+        g-min-interval = <2>;
+        g-fs-range = <0>;
+        x-poll-interval = <100>;
+        x-min-interval = <1>;
+        x-fs-range = <0>;
+        aa-filter-bw = <0>;
+    };
+};
 &soc {
 	i2c@78b6000 { /* BLSP1 QUP2 */
 		ams-sensor@39 {
@@ -29,37 +51,24 @@
 			ams,light-percent = <150>;
 		};
 
-		lsm6ds0@0x6A {
-			compatible = "st,lsm6ds0";
-			reg = <0x6A>;
-			pinctrl-names = "lsm6ds0_default","lsm6ds0_sleep";
-			pinctrl-0 = <&lsm6ds0_default>;
-			pinctrl-1 = <&lsm6ds0_sleep>;
-			vdd-supply = <&pm8916_l17>;
-			vio-supply = <&pm8916_l6>;
-			rot-matrix = /bits/ 16 <(-1) (0) (0)
-				(0) (1) (0)
-				(0) (0) (-1)>;
-			g-poll-interval = <100000>;
-			g-min-interval = <10000>;
-			g-fs-range = <24>;
-			x-poll-interval = <100000>;
-			x-min-interval = <10000>;
-			x-fs-range = <16>;
-			aa-filter-bw = <0>;
-		};
-
 		akm@c {
 			compatible = "ak,ak09911";
 			reg = <0x0c>;
-			pinctrl-names = "ak09911_default","ak09911_sleep";
-			pinctrl-0 = <&ak09911_default>;
-			pinctrl-1 = <&ak09911_sleep>;
+			pinctrl-names = "default","sleep";
+			pinctrl-0 = <&akm_default>;
+			pinctrl-1 = <&akm_sleep>;
 			vdd-supply = <&pm8916_l17>;
 			vio-supply = <&pm8916_l6>;
-			akm,layout = <0x8>;
+			akm,layout = <0x6>;
 			akm,gpio_rstn = <&msm_gpio 69 0x0>;
-			/*akm,auto-report;*/
+			akm,auto-report;
+			akm,use-hrtimer;
+			akm,i2c-scl-gpio = <&msm_gpio 7 0x0>;
+			akm,i2c-sda-gpio = <&msm_gpio 6 0x0>;
+			/delete-property/ ak,auto-report;
+			/delete-property/ ak,layout;
+			/delete-property/ interrupt-parent;
+			/delete-property/ interrupts;
 		};
 	};
 
