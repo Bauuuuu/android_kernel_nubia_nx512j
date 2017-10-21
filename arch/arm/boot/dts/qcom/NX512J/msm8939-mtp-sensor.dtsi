@@ -52,14 +52,21 @@
 		akm@c {
 			compatible = "ak,ak09911";
 			reg = <0x0c>;
-			pinctrl-names = "ak09911_default","ak09911_sleep";
-			pinctrl-0 = <&ak09911_default>;
-			pinctrl-1 = <&ak09911_sleep>;
+			pinctrl-names = "default","sleep";
+			pinctrl-0 = <&akm_default>;
+			pinctrl-1 = <&akm_sleep>;
 			vdd-supply = <&pm8916_l17>;
 			vio-supply = <&pm8916_l6>;
 			akm,layout = <0x6>;
 			akm,gpio_rstn = <&msm_gpio 69 0x0>;
-			/*akm,auto-report;*/
+			akm,auto-report;
+			akm,use-hrtimer;
+			akm,i2c-scl-gpio = <&msm_gpio 7 0x0>;
+			akm,i2c-sda-gpio = <&msm_gpio 6 0x0>;
+			/delete-property/ ak,auto-report;
+			/delete-property/ ak,layout;
+			/delete-property/ interrupt-parent;
+			/delete-property/ interrupts;
 		};
 	};
 

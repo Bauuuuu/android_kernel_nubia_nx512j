@@ -58,19 +58,20 @@
 			};
 		};
 
-		ak09911_int_pin {
+		akm_reset_pin {
 			qcom,pins = <&gp 69>;
 			qcom,pin-func = <0>;
 			qcom,num-grp-pins = <1>;
-			label = "ak09911-reset";
-			ak09911_default: ak09911_default {
+			label = "akm_reset_pin";
+			akm_default: akm_default {
 				drive-strength = <6>;
 				bias-pull-up;
 			};
-			ak09911_sleep: ak09911_sleep {
-				bias-high-impedance;
+			akm_sleep: akm_sleep {
+				drive-strength = <2>;
+				bias-pull-down;
 			};
-		};
+		}
 
 		hall_int_0_pin {
 			qcom,pins = <&gp 49>;
