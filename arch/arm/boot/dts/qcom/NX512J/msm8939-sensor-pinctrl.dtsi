@@ -71,7 +71,7 @@
 				drive-strength = <2>;
 				bias-pull-down;
 			};
-		}
+		};
 
 		hall_int_0_pin {
 			qcom,pins = <&gp 49>;
