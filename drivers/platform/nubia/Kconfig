@@ -20,4 +20,9 @@ config MACH_NX512J
 	help
 	  Support for Nubia NX512J variant
 
+config MACH_NX513J
+	bool "NX513J board"
+	select MACH_NUBIA_MSM8939
+	help
+	  Support for Nubia NX512J variant
 endmenu
