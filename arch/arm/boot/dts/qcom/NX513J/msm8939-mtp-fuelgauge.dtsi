@@ -26,6 +26,8 @@
  			bq-soc-int-gpio = <&msm_gpio 51 0x00>;
  			bq-low-int-gpio = <&msm_gpio 114 0x00>;
 			low-voltage-threshold = <3400>;
+			rpull-up-kohm = <100>;
+			vref-batt-therm = <1800000>;
 		};
 	};
 };
@@ -33,5 +35,24 @@
 &pm8916_bms {
 	status = "ok";
 	qcom,disable-bms;
+};
+
+&spmi_bus {
+	qcom,pm8916@0 {
+		qcom,spmi-dev {
+			spmi-dev-container;
+			compatible = "qcom,ztemt-spmi-dev";
+			#address-cells = <1>;
+			#size-cells = <1>;
+	
+			qcom,batt-pres-status@1208 {
+				reg = <0x1208 0x1>;
+			};
+	
+			qcom,spmi-base@4000 {
+				reg = <0x4000 0x100>;
+			};
+		};
+	};
 };
 

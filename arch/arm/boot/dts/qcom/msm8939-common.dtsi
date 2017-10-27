@@ -1202,7 +1202,7 @@
 		reg = <0x4a3000 0x1000>;
 		clock-frequency = <32768>;
 	};
-/* comment by congshan start 
+
 	blsp1_uart1: serial@78af000 {
 		compatible = "qcom,msm-hsuart-v14";
 		reg = <0x78af000 0x200>,
@@ -1233,7 +1233,7 @@
 		pinctrl-1 = <&hsuart_sleep>;
 		status = "disabled";
 	};
-comment by congshan end*/
+
 	qcom,venus@1de0000 {
 		compatible = "qcom,pil-tz-generic";
 		reg = <0x1de0000 0x4000>;
@@ -1876,6 +1876,17 @@ comment by congshan end*/
 		qcom,pre-div-channel-scaling = <0>;
 		qcom,calibration-type = "ratiometric";
 		qcom,scale-function = <4>;
+		qcom,hw-settle-time = <2>;
+		qcom,fast-avg-setup = <0>;
+	};
+
+	chan@13 {
+		label = "smb1351_therm";
+		reg = <0x13>;
+		qcom,decimation = <0x0>;
+		qcom,pre-div-channel-scaling = <0x0>;
+		qcom,calibration-type = "absolute";
+		qcom,scale-function = <2>;
 		qcom,hw-settle-time = <2>;
 		qcom,fast-avg-setup = <0>;
 	};

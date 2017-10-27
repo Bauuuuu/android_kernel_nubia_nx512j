@@ -289,8 +289,7 @@
 
 &pm8916_chg {
 	status = "ok";
-	//ZTEMT modify by swang,enable charger
-	//qcom,charging-disabled;
+	qcom,charging-disabled;
 };
 
 / {

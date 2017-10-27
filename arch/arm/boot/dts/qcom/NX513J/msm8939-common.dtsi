@@ -80,20 +80,8 @@
 			qcom,qpnp-rtc-alarm-pwrup = <1>;
 		};
 
-		pm8916_chg: qcom,charger {
-			qcom,vddmax-mv = <4350>;  //ZTEMT_CHARGER 4200 --> 4350
-			qcom,vddsafe-mv = <4350>;  //ZTEMT_CHARGER 4200 --> 4350
-			qcom,vinmin-mv = <4350>;  //ZTEMT_CHARGER 4200 --> 4350
-			qcom,cool-bat-decidegc = <50>;  //ZTEMT_CHARGER 100 --> -50
-			qcom,warm-bat-decidegc = <520>;  //ZTEMT_CHARGER 450 --> 520
-			qcom,resume-soc = <99>;
-		};
-
 		pm8916_bms: qcom,vmbms {
 			/delete-property/ qcom,resume-soc;
-			qcom,max-voltage-uv = <4350000>;  //ZTEMT_CHARGER 4200000 --> 4350000
-			qcom,shutdown-soc-valid-limit = <30>;  //ZTEMT_CHARGER 100 --> 30
-			qcom,low-voltage-threshold = <3420000>; //ZTEMT_CHARGER 3450000 --> 3420000
 		};
 	};
 };

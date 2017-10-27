@@ -112,8 +112,6 @@
 			};
 		};
 */
-/*comment by congshan start*/
-/*
 		blsp1_uart1_active {
 			qcom,pins = <&gp 0>, <&gp 1>, <&gp 2>, <&gp 3>;
 			qcom,num-grp-pins = <4>;
@@ -137,8 +135,7 @@
 			        bias-disable;
 			};
 		};
-*/
-/*comment by congshan end*/
+
 
 		sdhc2_cd_pin {
 			qcom,pins = <&gp 38>;
